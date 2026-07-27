@@ -100,8 +100,7 @@ export default {
 	props: {
 		visible: { type: Boolean, default: false },
 		placeholder: { type: String, default: '例如：明天老公喝水 500ml' },
-		monthData: { type: Object, default: () => ({}) },
-		context: { type: Object, default: () => ({}) }
+		monthData: { type: Object, default: () => ({}) }
 	},
 	emits: ['close', 'confirm'],
 	setup(props, { emit }) {
@@ -128,13 +127,10 @@ export default {
 			}
 
 			tipsLoading.value = true
-			try {
-				console.log('[AI Tips] 未命中缓存，开始调用 DeepSeek')
-				const data = await generateTipsByMonthData(md, {
-					today: todayKey(),
-					eventNames: props.context.eventNames || []
-				})
-				console.log('[AI Tips] DeepSeek 返回:', data)
+		try {
+			console.log('[AI Tips] 未命中缓存，开始调用后端')
+			const data = await generateTipsByMonthData(md)
+			console.log('[AI Tips] 后端返回:', data)
 				tips.value = data
 				setCache(data)
 			} catch (e) {

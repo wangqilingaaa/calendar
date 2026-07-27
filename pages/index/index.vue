@@ -103,7 +103,6 @@
 		<ai-input-modal
 			:visible="aiModalVisible"
 			:month-data="monthDataRef"
-			:context="aiModalContext"
 			@close="closeAiModal"
 			@confirm="handleAiConfirm"
 		/>
@@ -258,11 +257,7 @@ export default {
 		async function processAiText(text) {
 			try {
 				uni.showLoading({ title: 'AI 解析中...', mask: true })
-				const data = await parseDiaryByText(text, {
-					today: todayKey(),
-					eventNames: EVENT_TYPES.map(t => t.name),
-					personNames: PERSONS.map(p => p.name)
-				})
+				const data = await parseDiaryByText(text)
 				uni.hideLoading()
 				await executeAiAdd(data, text)
 			} catch (e) {
@@ -492,16 +487,11 @@ export default {
 
 		watch([currentYear, currentMonth], buildGrid, { immediate: true })
 
-		const aiModalContext = {
-			eventNames: EVENT_TYPES.map(t => t.name),
-			today: todayKey()
-		}
-
 		return {
 			currentYear, currentMonth, weekdays,
 			gridCells, loading, selectedDate, selectedEvents, modalVisible,
 			isDark, isCurrentMonth, navBarStyle, monthDataRef,
-			recording, recordTip, aiModalVisible, aiModalContext,
+			recording, recordTip, aiModalVisible,
 			selectDate, closeModal, refreshCalendar,
 			prevMonth, nextMonth, goToday, toggleTheme, goToStats, goToUser,
 			handleAiTap, handleAiLongPress, handleAiTouchEnd,
