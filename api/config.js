@@ -8,5 +8,5 @@
  *
  * 微信小程序开发需在「详情 → 本地设置」勾选「不校验合法域名」
  */
-// export const API_BASE = 'http://112.124.7.78:8085'
-export const API_BASE = 'http://127.0.0.1:8085'
+export const API_BASE = 'http://112.124.7.78:8085'
+// export const API_BASE = 'http://127.0.0.1:8085'

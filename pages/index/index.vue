@@ -259,7 +259,7 @@ export default {
 				uni.showLoading({ title: 'AI 解析中...', mask: true })
 				const data = await parseDiaryByText(text)
 				uni.hideLoading()
-				await executeAiAdd(data, text)
+				await executeAiAdd(data)
 			} catch (e) {
 				uni.hideLoading()
 			}
