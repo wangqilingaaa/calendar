@@ -159,7 +159,7 @@ export async function getMonthData(year, month) {
 		result.days.forEach(dayGroup => {
 			map[dayGroup.date] = {
 				status: dayGroup.daily_status,
-				events: dayGroup.diaries.map(diaryToEvent)
+				events: (dayGroup.diaries || []).map(diaryToEvent)
 			}
 		})
 		return map
@@ -187,7 +187,7 @@ export async function getDateRangeEvents(startKey, endKey) {
 				if (result && result.days) {
 					result.days.forEach(day => {
 						if (day.date >= startKey && day.date <= endKey) {
-							day.diaries.forEach(d => {
+							(day.diaries || []).forEach(d => {
 								all.push({ ...diaryToEvent(d), date: day.date })
 							})
 						}

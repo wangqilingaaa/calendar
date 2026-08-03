@@ -9,6 +9,9 @@
 				</view>
 			</view>
 			<view class="top-right">
+				<view class="top-btn" @tap="goToMeal">
+					<app-icon name="eat" :size="36" color="#999" />
+				</view>
 				<view class="top-btn" @tap="goToStats">
 					<app-icon name="statistics" :size="36" color="#999" />
 				</view>
@@ -484,6 +487,9 @@ export default {
 		function goToUser() {
 			uni.navigateTo({ url: '/pages/user/index' })
 		}
+		function goToMeal() {
+			uni.navigateTo({ url: '/pages/weekly-meal/index' })
+		}
 
 		watch([currentYear, currentMonth], buildGrid, { immediate: true })
 
@@ -493,7 +499,7 @@ export default {
 			isDark, isCurrentMonth, navBarStyle, monthDataRef,
 			recording, recordTip, aiModalVisible,
 			selectDate, closeModal, refreshCalendar,
-			prevMonth, nextMonth, goToday, toggleTheme, goToStats, goToUser,
+			prevMonth, nextMonth, goToday, toggleTheme, goToStats, goToUser, goToMeal,
 			handleAiTap, handleAiLongPress, handleAiTouchEnd,
 			closeAiModal, handleAiConfirm
 		}
