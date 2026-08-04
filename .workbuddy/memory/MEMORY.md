@@ -8,6 +8,11 @@
 - 现有 `eat` 事件类型只能计数次数，记不了餐次/菜名/热量，是主要改造点。
 - 方案文档见 `每日食谱产品方案.md`（2026-08-03 由产品通产出，已到 v0.2）。
 
+## 实际实现（pages/weekly-meal）与方案差异
+- 周餐计划页 `pages/weekly-meal/index.vue` 已落地，但**纯前端本地存储**（`uni.storage`，key=周一日期），未对接 Diary API / 后端。
+- 前端实际数据结构比方案精简：dish 仅 `{name, done}`，**未含** calorie/person/tag/date 字段；餐次枚举为 breakfast/lunch/dinner/snack。
+- 若后端接 Golang：当前前端「整周一块 JSON」结构不利于查询/统计，建议落库时展开为记录粒度（含 Date/Weekday/Meal/Person/Calorie/Done/时间戳）。详见 2026-08-04 日志的 model 提取。
+
 ## 用户协作偏好
 - 问「做成什么样」类问题时，先看信息架构图 + UI 草图，再细化落地。
 - 角色：可切换「产品通」做产品规划/PRD，或技术实现模式做代码。
