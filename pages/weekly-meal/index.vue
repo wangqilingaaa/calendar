@@ -20,38 +20,21 @@
 		<view class="materials-bar">
 			<view class="materials-head">
 				<text class="materials-title">原材料</text>
-				<text class="materials-count" v-if="materials.length"
-					>已购 {{ purchasedCount }}/{{ materials.length }}</text
-				>
+				<text class="materials-count" v-if="materials.length">已购 {{ purchasedCount }}/{{ materials.length }}</text>
 			</view>
 			<view class="materials-list" v-if="materials.length">
-				<view
-					v-for="(mt, i) in materials"
-					:key="mt.id || i"
-					class="material-chip"
-					:class="{ 'material-chip--done': mt.purchased }"
-					@tap="toggleMaterial(i)"
-				>
-					<view
-						class="material-check"
-						:class="{ 'material-check--done': mt.purchased }"
-					>
+				<view v-for="(mt, i) in materials" :key="mt.id || i" class="material-chip"
+					:class="{ 'material-chip--done': mt.purchased }" @tap="toggleMaterial(i)">
+					<view class="material-check" :class="{ 'material-check--done': mt.purchased }">
 						<text v-if="mt.purchased" class="material-tick">✓</text>
 					</view>
 					<text class="material-text">{{ mt.name }}</text>
-					<text class="material-del" @tap.stop="removeMaterial(i)"
-						>×</text
-					>
+					<text class="material-del" @tap.stop="removeMaterial(i)">×</text>
 				</view>
 			</view>
 			<view class="materials-add">
-				<input
-					class="material-input"
-					v-model="materialInput"
-					placeholder="添加食材，如 鸡蛋"
-					confirm-type="done"
-					@confirm="addMaterial"
-				/>
+				<input class="material-input" v-model="materialInput" placeholder="添加食材，如 鸡蛋" confirm-type="done"
+					@confirm="addMaterial" />
 				<text class="material-add-btn" @tap="addMaterial">+</text>
 			</view>
 		</view>
@@ -60,19 +43,10 @@
 		<scroll-view class="day-list" scroll-y>
 			<!-- 内层容器承载 padding：scroll-view 直接加 padding 会导致内容宽度溢出 / 底部滚不到 -->
 			<view class="day-list-inner">
-				<view
-					v-for="(wd, di) in weekDays"
-					:key="di"
-					class="day-card"
-					:class="{ 'day-card--today': wd.isToday }"
-				>
+				<view v-for="(wd, di) in weekDays" :key="di" class="day-card" :class="{ 'day-card--today': wd.isToday }">
 					<view class="day-head">
 						<view class="day-head-left">
-							<text
-								class="day-name"
-								:class="{ 'day-name--today': wd.isToday }"
-								>{{ wd.label }}</text
-							>
+							<text class="day-name" :class="{ 'day-name--today': wd.isToday }">{{ wd.label }}</text>
 							<text class="day-date">{{ wd.dateText }}</text>
 						</view>
 						<view class="day-progress" v-if="wd.total">
@@ -80,37 +54,19 @@
 						</view>
 					</view>
 
-					<view
-						v-for="meal in meals"
-						:key="meal.id"
-						class="meal-block"
-						@tap="openModal(di, meal.id)"
-					>
+					<view v-for="meal in meals" :key="meal.id" class="meal-block" @tap="openModal(di, meal.id)">
 						<view class="meal-label">
-							<view
-								class="meal-dot"
-								:style="{ background: meal.color }"
-							></view>
+							<view class="meal-dot" :style="{ background: meal.color }"></view>
 							<text class="meal-name">{{ meal.name }}</text>
 						</view>
 						<view class="dish-wrap">
 							<template v-if="plan[di][meal.id].length">
-								<view
-									v-for="(dish, i) in plan[di][meal.id]"
-									:key="i"
-									class="dish-chip"
-									:class="{ 'dish-chip--done': dish.done }"
-									@tap.stop="toggleDish(di, meal.id, i)"
-								>
-									<view
-										class="dish-check"
-										:class="{
-											'dish-check--done': dish.done,
-										}"
-									>
-										<text v-if="dish.done" class="dish-tick"
-											>✓</text
-										>
+								<view v-for="(dish, i) in plan[di][meal.id]" :key="i" class="dish-chip"
+									:class="{ 'dish-chip--done': dish.done }" @tap.stop="toggleDish(di, meal.id, i)">
+									<view class="dish-check" :class="{
+										'dish-check--done': dish.done,
+									}">
+										<text v-if="dish.done" class="dish-tick">✓</text>
 									</view>
 									<text class="dish-text">{{
 										dish.name
@@ -134,18 +90,9 @@
 		</view>
 
 		<!-- 菜单管理弹窗（与 date-detail-modal 风格统一） -->
-		<meal-detail-modal
-			:visible="modal.open"
-			:weekday-label="modalWeekday"
-			:date-text="modalDate"
-			:meal-name="modalMealName"
-			:dishes="currentDishes"
-			@close="closeModal"
-			@toggle="onToggle"
-			@remove="onRemove"
-			@add="onAdd"
-			@clear="onClear"
-		/>
+		<meal-detail-modal :visible="modal.open" :weekday-label="modalWeekday" :date-text="modalDate"
+			:meal-name="modalMealName" :dishes="currentDishes" @close="closeModal" @toggle="onToggle" @remove="onRemove"
+			@add="onAdd" @clear="onClear" />
 	</view>
 </template>
 
@@ -658,6 +605,7 @@ loadWeek(0);
 	display: flex;
 	flex-direction: column;
 }
+
 .meal-week.theme-dark {
 	background: #1c1c1e;
 }
@@ -669,15 +617,18 @@ loadWeek(0);
 	justify-content: space-between;
 	position: relative;
 }
+
 .top-back {
 	font-size: 52rpx;
 	font-weight: 200;
 	color: #1a1a1a;
 	width: 60rpx;
 }
+
 .theme-dark .top-back {
 	color: #e5e5e7;
 }
+
 .top-title {
 	position: absolute;
 	left: 50%;
@@ -687,6 +638,7 @@ loadWeek(0);
 	color: #1a1a1a;
 	pointer-events: none;
 }
+
 .theme-dark .top-title {
 	color: #e5e5e7;
 }
@@ -698,12 +650,14 @@ loadWeek(0);
 	justify-content: center;
 	padding: 10rpx 0 16rpx;
 }
+
 .loading-tip {
 	text-align: center;
 	font-size: 24rpx;
 	color: #999;
 	padding: 20rpx 0;
 }
+
 .theme-dark .loading-tip {
 	color: #8e8e93;
 }
@@ -715,34 +669,41 @@ loadWeek(0);
 	background: #f8f8f8;
 	border-radius: 20rpx;
 }
+
 .theme-dark .materials-bar {
 	background: #2c2c2e;
 }
+
 .materials-head {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	margin-bottom: 16rpx;
 }
+
 .materials-title {
 	font-size: 28rpx;
 	font-weight: 700;
 	color: #1a1a1a;
 }
+
 .theme-dark .materials-title {
 	color: #e5e5e7;
 }
+
 .materials-count {
 	font-size: 22rpx;
 	color: #1d9e75;
 	font-weight: 600;
 }
+
 .materials-list {
 	display: flex;
 	flex-wrap: wrap;
 	max-height: 240rpx;
 	overflow-y: auto;
 }
+
 .material-chip {
 	display: inline-flex;
 	align-items: center;
@@ -751,9 +712,11 @@ loadWeek(0);
 	padding: 10rpx 18rpx;
 	margin: 0 12rpx 12rpx 0;
 }
+
 .theme-dark .material-chip {
 	background: #3a3a3c;
 }
+
 .material-check {
 	width: 30rpx;
 	height: 30rpx;
@@ -764,30 +727,37 @@ loadWeek(0);
 	align-items: center;
 	justify-content: center;
 }
+
 .material-check--done {
 	background: #1d9e75;
 	border-color: #1d9e75;
 }
+
 .material-tick {
 	font-size: 20rpx;
 	color: #fff;
 	line-height: 1;
 }
+
 .material-text {
 	font-size: 26rpx;
 	color: #1a1a1a;
 	margin-left: 10rpx;
 }
+
 .theme-dark .material-text {
 	color: #e5e5e7;
 }
+
 .material-chip--done {
 	background: rgba(29, 158, 117, 0.12);
 }
+
 .material-chip--done .material-text {
 	color: #999;
 	text-decoration: line-through;
 }
+
 .material-del {
 	font-size: 30rpx;
 	color: #ccc;
@@ -795,13 +765,16 @@ loadWeek(0);
 	padding: 0 4rpx;
 	font-weight: 300;
 }
+
 .theme-dark .material-del {
 	color: #636366;
 }
+
 .materials-add {
 	display: flex;
 	align-items: center;
 }
+
 .material-input {
 	flex: 1;
 	height: 64rpx;
@@ -812,11 +785,13 @@ loadWeek(0);
 	background: #fff;
 	color: #1a1a1a;
 }
+
 .theme-dark .material-input {
 	background: #3a3a3c;
 	border-color: #48484a;
 	color: #e5e5e7;
 }
+
 .material-add-btn {
 	flex-shrink: 0;
 	width: 64rpx;
@@ -830,10 +805,12 @@ loadWeek(0);
 	text-align: center;
 	margin-left: 14rpx;
 }
+
 .theme-dark .material-add-btn {
 	background: #e5e5e7;
 	color: #1c1c1e;
 }
+
 .nav-arrow {
 	font-size: 48rpx;
 	font-weight: 200;
@@ -841,14 +818,17 @@ loadWeek(0);
 	padding: 0 36rpx;
 	line-height: 1;
 }
+
 .theme-dark .nav-arrow {
 	color: #8e8e93;
 }
+
 .nav-range {
 	font-size: 30rpx;
 	font-weight: 600;
 	color: #1a1a1a;
 }
+
 .theme-dark .nav-range {
 	color: #e5e5e7;
 }
@@ -869,6 +849,7 @@ loadWeek(0);
 	margin-bottom: 20rpx;
 	overflow: hidden;
 }
+
 .theme-dark .day-card {
 	background: #2c2c2e;
 }
@@ -876,6 +857,7 @@ loadWeek(0);
 .day-card--today {
 	background: rgba(0, 122, 255, 0.06);
 }
+
 .theme-dark .day-card--today {
 	background: rgba(10, 132, 255, 0.2);
 }
@@ -887,32 +869,40 @@ loadWeek(0);
 	padding: 22rpx 26rpx 16rpx;
 	border-bottom: 1rpx solid #eee;
 }
+
 .theme-dark .day-head {
 	border-bottom-color: #38383a;
 }
+
 .day-head-left {
 	display: flex;
 	align-items: baseline;
 }
+
 .day-name {
 	font-size: 30rpx;
 	font-weight: 700;
 	color: #1a1a1a;
 }
+
 .theme-dark .day-name {
 	color: #e5e5e7;
 }
+
 .day-name--today {
 	color: #007aff;
 }
+
 .day-date {
 	font-size: 24rpx;
 	color: #999;
 	margin-left: 12rpx;
 }
+
 .theme-dark .day-date {
 	color: #8e8e93;
 }
+
 .day-progress {
 	font-size: 22rpx;
 	color: #1d9e75;
@@ -926,9 +916,11 @@ loadWeek(0);
 	padding: 18rpx 26rpx;
 	border-bottom: 1rpx solid #eee;
 }
+
 .meal-block:last-child {
 	border-bottom: none;
 }
+
 .theme-dark .meal-block {
 	border-bottom-color: #38383a;
 }
@@ -940,6 +932,7 @@ loadWeek(0);
 	align-items: center;
 	padding-top: 6rpx;
 }
+
 .meal-dot {
 	width: 14rpx;
 	height: 14rpx;
@@ -947,11 +940,13 @@ loadWeek(0);
 	margin-right: 10rpx;
 	flex-shrink: 0;
 }
+
 .meal-name {
 	font-size: 26rpx;
 	font-weight: 600;
 	color: #1a1a1a;
 }
+
 .theme-dark .meal-name {
 	color: #e5e5e7;
 }
@@ -972,9 +967,11 @@ loadWeek(0);
 	padding: 10rpx 18rpx;
 	margin: 0 12rpx 12rpx 0;
 }
+
 .theme-dark .dish-chip {
 	background: #3a3a3c;
 }
+
 .dish-check {
 	width: 30rpx;
 	height: 30rpx;
@@ -985,35 +982,43 @@ loadWeek(0);
 	align-items: center;
 	justify-content: center;
 }
+
 .dish-check--done {
 	background: #1d9e75;
 	border-color: #1d9e75;
 }
+
 .dish-tick {
 	font-size: 20rpx;
 	color: #fff;
 	line-height: 1;
 }
+
 .dish-text {
 	font-size: 26rpx;
 	color: #1a1a1a;
 	margin-left: 10rpx;
 }
+
 .theme-dark .dish-text {
 	color: #e5e5e7;
 }
+
 .dish-chip--done {
 	background: rgba(29, 158, 117, 0.12);
 }
+
 .dish-chip--done .dish-text {
 	color: #999;
 	text-decoration: line-through;
 }
+
 .dish-empty {
 	font-size: 24rpx;
 	color: #bbb;
 	padding: 8rpx 0;
 }
+
 .theme-dark .dish-empty {
 	color: #636366;
 }
@@ -1027,20 +1032,24 @@ loadWeek(0);
 	background: #fff;
 	border-top: 1rpx solid #f0f0f0;
 }
+
 .theme-dark .bottom-bar {
 	background: #1c1c1e;
 	border-top-color: #38383a;
 }
+
 .progress-num {
 	font-size: 34rpx;
 	font-weight: 700;
 	color: #1d9e75;
 }
+
 .progress-total {
 	font-size: 24rpx;
 	color: #999;
 	margin-left: 6rpx;
 }
+
 .copy-btn {
 	padding: 14rpx 32rpx;
 	border-radius: 30rpx;
@@ -1049,6 +1058,7 @@ loadWeek(0);
 	font-size: 24rpx;
 	font-weight: 600;
 }
+
 .theme-dark .copy-btn {
 	background: #e5e5e7;
 	color: #1c1c1e;

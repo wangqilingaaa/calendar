@@ -1,37 +1,19 @@
 <template>
-	<view
-		class="ai-mask"
-		:class="{ 'ai-mask--dark': isDark }"
-		v-if="visible"
-		@tap="onMaskTap"
-	>
+	<view class="ai-mask" :class="{ 'ai-mask--dark': isDark }" v-if="visible" @tap="onMaskTap">
 		<view class="ai-sheet" @tap.stop>
 			<!-- 头部 -->
 			<view class="ai-head">
 				<text class="ai-title">AI 智能添加</text>
 				<view class="ai-close" @tap="onClose">
-					<app-icon
-						name="close"
-						:size="32"
-						:color="isDark ? '#8e8e93' : '#999'"
-					/>
+					<app-icon name="close" :size="32" :color="isDark ? '#8e8e93' : '#999'" />
 				</view>
 			</view>
 
 			<!-- 输入区 -->
 			<view class="ai-body">
-				<textarea
-					class="ai-textarea"
-					:class="{ 'ai-textarea--dark': isDark }"
-					v-model="inputValue"
-					:placeholder="placeholder"
-					placeholder-class="ai-placeholder"
-					:maxlength="200"
-					:auto-height="true"
-					:focus="visible"
-					confirm-type="done"
-					@confirm="onConfirm"
-				></textarea>
+				<textarea class="ai-textarea" :class="{ 'ai-textarea--dark': isDark }" v-model="inputValue"
+					:placeholder="placeholder" placeholder-class="ai-placeholder" :maxlength="200" :auto-height="true"
+					:focus="visible" confirm-type="done" @confirm="onConfirm"></textarea>
 				<text class="ai-counter">{{ inputValue.length }}/200</text>
 			</view>
 
@@ -39,32 +21,18 @@
 			<view class="ai-tips">
 				<text class="ai-tips-label">试试这样说：</text>
 				<view v-if="tipsLoading" class="ai-chips">
-					<text
-						class="ai-chip ai-chip--loading"
-						:class="{ 'ai-chip--dark': isDark }"
-						>AI 生成中...</text
-					>
+					<text class="ai-chip ai-chip--loading" :class="{ 'ai-chip--dark': isDark }">AI 生成中...</text>
 				</view>
 				<view v-else class="ai-chips">
-					<text
-						v-for="(tip, idx) in tips"
-						:key="idx"
-						class="ai-chip"
-						:class="{ 'ai-chip--dark': isDark }"
-						@tap="useTip(tip)"
-						>{{ tip }}</text
-					>
+					<text v-for="(tip, idx) in tips" :key="idx" class="ai-chip" :class="{ 'ai-chip--dark': isDark }"
+						@tap="useTip(tip)">{{ tip }}</text>
 				</view>
 			</view>
 
 			<!-- 底部按钮 -->
 			<view class="ai-foot">
 				<text class="ai-btn ai-btn--cancel" @tap="onClose">取消</text>
-				<text
-					class="ai-btn ai-btn--confirm"
-					:class="{ disabled: !inputValue.trim() }"
-					@tap="onConfirm"
-				>
+				<text class="ai-btn ai-btn--confirm" :class="{ disabled: !inputValue.trim() }" @tap="onConfirm">
 					<app-icon name="send" :size="24" color="#fff" />
 					<text>发送</text>
 				</text>
@@ -335,12 +303,14 @@ function useTip(tip) {
 	background: #2c2c2e;
 	color: #a1a1a6;
 }
+
 .ai-chip--loading {
 	background: transparent;
 	color: #999;
 	padding-left: 0;
 	padding-right: 0;
 }
+
 .ai-chip--loading.ai-chip--dark {
 	background: transparent;
 	color: #636366;

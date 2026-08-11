@@ -1,10 +1,5 @@
 <template>
-	<view
-		class="modal-mask"
-		:class="{ 'modal-dark': isDark }"
-		v-if="visible"
-		@tap="$emit('close')"
-	>
+	<view class="modal-mask" :class="{ 'modal-dark': isDark }" v-if="visible" @tap="$emit('close')">
 		<view class="modal-sheet" @tap.stop>
 			<!-- 日期标题 -->
 			<view class="sheet-head">
@@ -15,30 +10,21 @@
 			<!-- ====== 日期状态 ====== -->
 			<view class="block">
 				<view class="status-row">
-					<view
-						v-for="s in statuses"
-						:key="s.id"
-						class="status-dot"
-						:class="{ active: currentStatus === s.id }"
-						@tap="changeStatus(s.id)"
-					>
-						<view
-							class="dot-circle"
-							:style="
-								s.color !== 'transparent'
-									? {
-											backgroundColor:
-												currentStatus === s.id
-													? s.color
-													: 'transparent',
-											borderColor:
-												currentStatus === s.id
-													? s.color
-													: '#ddd',
-										}
-									: { borderColor: '#ddd' }
-							"
-						>
+					<view v-for="s in statuses" :key="s.id" class="status-dot" :class="{ active: currentStatus === s.id }"
+						@tap="changeStatus(s.id)">
+						<view class="dot-circle" :style="s.color !== 'transparent'
+								? {
+									backgroundColor:
+										currentStatus === s.id
+											? s.color
+											: 'transparent',
+									borderColor:
+										currentStatus === s.id
+											? s.color
+											: '#ddd',
+								}
+								: { borderColor: '#ddd' }
+							">
 						</view>
 						<text>{{ s.name }}</text>
 					</view>
@@ -54,25 +40,18 @@
 				<view v-if="events.length" class="event-list">
 					<view v-for="ev in events" :key="ev.id" class="event-item">
 						<view class="ev-left">
-							<app-icon
-								:name="ev.type"
-								:size="36"
-								:color="typeColor(ev.type)"
-							/>
+							<app-icon :name="ev.type" :size="36" :color="typeColor(ev.type)" />
 							<view class="ev-info">
 								<text class="ev-title">{{ ev.title }}</text>
 								<view class="ev-meta">
 									<text class="ev-type">{{
 										typeName(ev.type)
 									}}</text>
-									<view
-										class="ev-person-tag"
-										:style="{
-											backgroundColor:
-												personColor(ev.person) + '18',
-											color: personColor(ev.person),
-										}"
-									>
+									<view class="ev-person-tag" :style="{
+										backgroundColor:
+											personColor(ev.person) + '18',
+										color: personColor(ev.person),
+									}">
 										{{ personName(ev.person) }}
 									</view>
 								</view>
@@ -82,28 +61,16 @@
 							</view>
 						</view>
 						<view class="ev-right">
-							<template
-								v-if="countableType(ev.type) && ev.count > 0"
-							>
+							<template v-if="countableType(ev.type) && ev.count > 0">
 								<view class="count-ctrl">
-									<text
-										class="count-btn"
-										@tap.stop="decEvent(ev)"
-										>-</text
-									>
+									<text class="count-btn" @tap.stop="decEvent(ev)">-</text>
 									<text class="count-num">{{
 										ev.count
 									}}</text>
-									<text
-										class="count-btn"
-										@tap.stop="incEvent(ev)"
-										>+</text
-									>
+									<text class="count-btn" @tap.stop="incEvent(ev)">+</text>
 								</view>
 							</template>
-							<text class="del-btn" @tap.stop="delEvent(ev.id)"
-								>x</text
-							>
+							<text class="del-btn" @tap.stop="delEvent(ev.id)">x</text>
 						</view>
 					</view>
 				</view>
@@ -115,84 +82,46 @@
 
 				<!-- 人物选择 -->
 				<view class="person-row">
-					<view
-						v-for="p in persons"
-						:key="p.id"
-						class="person-chip"
-						:class="{ active: addPerson === p.name }"
-						:style="
-							addPerson === p.name
-								? {
-										backgroundColor: p.color,
-										borderColor: p.color,
-										color: '#fff',
-									}
-								: {
-										color: p.color,
-										borderColor: p.color + '60',
-									}
-						"
-						@tap="addPerson = p.name"
-					>
+					<view v-for="p in persons" :key="p.id" class="person-chip" :class="{ active: addPerson === p.name }" :style="addPerson === p.name
+							? {
+								backgroundColor: p.color,
+								borderColor: p.color,
+								color: '#fff',
+							}
+							: {
+								color: p.color,
+								borderColor: p.color + '60',
+							}
+						" @tap="addPerson = p.name">
 						<text>{{ p.name }}</text>
 					</view>
 				</view>
 
 				<!-- 类型选择 -->
-				<scroll-view
-					scroll-x
-					class="type-scroll"
-					:show-scrollbar="false"
-				>
+				<scroll-view scroll-x class="type-scroll" :show-scrollbar="false">
 					<view class="type-row">
-						<view
-							v-for="t in types"
-							:key="t.id"
-							class="type-chip"
-							:class="{ active: addType === t.id }"
-							:style="
-								addType === t.id ? { borderColor: t.color } : {}
-							"
-							@tap="addType = t.id"
-						>
-							<app-icon
-								:name="t.id"
-								:size="32"
-								:color="addType === t.id ? t.color : '#999'"
-							/>
-							<text
-								:style="
-									addType === t.id
-										? { color: t.color }
-										: { color: '#999' }
-								"
-								>{{ t.name }}</text
-							>
+						<view v-for="t in types" :key="t.id" class="type-chip" :class="{ active: addType === t.id }" :style="addType === t.id ? { borderColor: t.color } : {}
+							" @tap="addType = t.id">
+							<app-icon :name="t.id" :size="32" :color="addType === t.id ? t.color : '#999'" />
+							<text :style="addType === t.id
+									? { color: t.color }
+									: { color: '#999' }
+								">{{ t.name }}</text>
 						</view>
 					</view>
 				</scroll-view>
 
 				<!-- 输入行 -->
 				<view class="add-bar">
-					<input
-						class="add-input"
-						v-model="addTitle"
-						:placeholder="addPlaceholder"
-						confirm-type="done"
-						@confirm="doAdd"
-					/>
+					<input class="add-input" v-model="addTitle" :placeholder="addPlaceholder" confirm-type="done"
+						@confirm="doAdd" />
 					<text class="add-btn" @tap="doAdd">+</text>
 				</view>
 			</view>
 
 			<!-- 底部 -->
 			<view class="sheet-foot">
-				<text
-					v-if="events.length"
-					class="foot-link danger"
-					@tap="clearAll"
-					>清空全部</text
-				>
+				<text v-if="events.length" class="foot-link danger" @tap="clearAll">清空全部</text>
 				<text class="foot-link" @tap="$emit('close')">关闭</text>
 			</view>
 		</view>

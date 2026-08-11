@@ -5,11 +5,7 @@
 			<view class="top-left">
 				<text class="top-year">{{ currentYear }}</text>
 				<view class="top-theme" @tap="toggleTheme">
-					<app-icon
-						:name="isDark ? 'moon' : 'sun'"
-						:size="36"
-						:color="isDark ? '#f1c40f' : '#f39c12'"
-					/>
+					<app-icon :name="isDark ? 'moon' : 'sun'" :size="36" :color="isDark ? '#f1c40f' : '#f39c12'" />
 				</view>
 			</view>
 			<view class="top-right">
@@ -34,50 +30,27 @@
 
 		<!-- ====== 星期标题栏 ====== -->
 		<view class="weekday-row">
-			<text
-				v-for="wd in weekdays"
-				:key="wd"
-				class="weekday-cell"
-				:class="{ 'weekday-weekend': wd === '六' || wd === '日' }"
-				>{{ wd }}</text
-			>
+			<text v-for="wd in weekdays" :key="wd" class="weekday-cell"
+				:class="{ 'weekday-weekend': wd === '六' || wd === '日' }">{{ wd }}</text>
 		</view>
 
 		<!-- ====== 日期网格 ====== -->
 		<view class="calendar-grid">
-			<view
-				v-for="(cell, idx) in gridCells"
-				:key="idx"
-				class="date-cell"
-				:class="{
-					'date-cell--other': !cell.isCurrentMonth,
-					'date-cell--today': cell.isToday,
-				}"
-				@tap="selectDate(cell)"
-			>
+			<view v-for="(cell, idx) in gridCells" :key="idx" class="date-cell" :class="{
+				'date-cell--other': !cell.isCurrentMonth,
+				'date-cell--today': cell.isToday,
+			}" @tap="selectDate(cell)">
 				<!-- 日期数字 -->
-				<text
-					class="date-num"
-					:class="{ 'date-num--today': cell.isToday }"
-					>{{ cell.day }}</text
-				>
+				<text class="date-num" :class="{ 'date-num--today': cell.isToday }">{{ cell.day }}</text>
 
 				<!-- 人物色点 -->
 				<view v-if="cell.personDots.length" class="person-dots">
-					<view
-						v-for="(d, di) in cell.personDots"
-						:key="di"
-						class="person-dot"
-						:style="{ backgroundColor: d.color }"
-					></view>
+					<view v-for="(d, di) in cell.personDots" :key="di" class="person-dot" :style="{ backgroundColor: d.color }">
+					</view>
 				</view>
 
 				<!-- 状态标记 -->
-				<view
-					v-if="cell.status !== 'normal'"
-					class="status-mark"
-					:style="{ backgroundColor: cell.statusColor }"
-				></view>
+				<view v-if="cell.status !== 'normal'" class="status-mark" :style="{ backgroundColor: cell.statusColor }"></view>
 				<!-- 计数角标 -->
 				<text v-if="cell.countTotal > 0" class="count-badge">{{
 					cell.countTotal
@@ -91,19 +64,9 @@
 		</view>
 
 		<!-- ====== AI 语音按钮 ====== -->
-		<view
-			class="ai-fab"
-			:class="{ 'ai-fab--recording': recording }"
-			@tap="handleAiTap"
-			@longpress="handleAiLongPress"
-			@touchend="handleAiTouchEnd"
-			@touchcancel="handleAiTouchEnd"
-		>
-			<app-icon
-				name="ai"
-				:size="40"
-				:color="recording ? '#ff3b30' : '#fff'"
-			/>
+		<view class="ai-fab" :class="{ 'ai-fab--recording': recording }" @tap="handleAiTap" @longpress="handleAiLongPress"
+			@touchend="handleAiTouchEnd" @touchcancel="handleAiTouchEnd">
+			<app-icon name="ai" :size="40" :color="recording ? '#ff3b30' : '#fff'" />
 		</view>
 
 		<!-- ====== 录音中浮层 ====== -->
@@ -119,26 +82,13 @@
 		</view>
 
 		<!-- ====== AI 文字输入弹窗 ====== -->
-		<ai-input-modal
-			:visible="aiModalVisible"
-			:month-data="monthDataRef"
-			@close="closeAiModal"
-			@confirm="handleAiConfirm"
-		/>
+		<ai-input-modal :visible="aiModalVisible" :month-data="monthDataRef" @close="closeAiModal"
+			@confirm="handleAiConfirm" />
 
 		<!-- ====== 日期详情弹窗 ====== -->
-		<date-detail-modal
-			v-if="selectedDate"
-			:year="selectedDate.year"
-			:month="selectedDate.month"
-			:day="selectedDate.day"
-			:events="selectedEvents"
-			:visible="modalVisible"
-			:status="selectedDate.status"
-			:persons="persons"
-			@close="closeModal"
-			@refresh="refreshCalendar"
-		/>
+		<date-detail-modal v-if="selectedDate" :year="selectedDate.year" :month="selectedDate.month" :day="selectedDate.day"
+			:events="selectedEvents" :visible="modalVisible" :status="selectedDate.status" :persons="persons"
+			@close="closeModal" @refresh="refreshCalendar" />
 	</view>
 </template>
 
@@ -468,7 +418,7 @@ async function buildGrid() {
 
 		const statusDef = status
 			? DATE_STATUSES.find((item) => item.id === status) ||
-				DATE_STATUSES[0]
+			DATE_STATUSES[0]
 			: DATE_STATUSES[0];
 
 		const personSet = new Set();
@@ -590,6 +540,7 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	flex-direction: column;
 	height: 100vh;
 }
+
 .calendar-page.theme-dark {
 	background: #1c1c1e;
 }
@@ -600,19 +551,23 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	justify-content: space-between;
 	align-items: center;
 }
+
 .top-left {
 	display: flex;
 	align-items: center;
 }
+
 .top-left .top-theme {
 	margin-left: 10rpx;
 	padding: 8rpx;
 }
+
 .top-year {
 	font-size: 48rpx;
 	font-weight: 700;
 	color: #1a1a1a;
 }
+
 .theme-dark .top-year {
 	color: #e5e5e7;
 }
@@ -620,6 +575,7 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 .top-right {
 	display: flex;
 }
+
 .top-btn {
 	margin-left: 10rpx;
 	width: 64rpx;
@@ -630,6 +586,7 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	border-radius: 50%;
 	background: #f8f8f8;
 }
+
 .theme-dark .top-btn {
 	background: #2c2c2e;
 }
@@ -641,6 +598,7 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	justify-content: center;
 	padding: 10rpx 0 16rpx;
 }
+
 .nav-arrow {
 	font-size: 48rpx;
 	font-weight: 200;
@@ -648,6 +606,7 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	padding: 0 36rpx;
 	line-height: 1;
 }
+
 .theme-dark .nav-arrow {
 	color: #8e8e93;
 }
@@ -659,6 +618,7 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	text-align: center;
 	width: 120rpx;
 }
+
 .theme-dark .nav-title {
 	color: #e5e5e7;
 }
@@ -668,6 +628,7 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	display: flex;
 	padding: 8rpx 0 12rpx;
 }
+
 .weekday-cell {
 	flex: 1;
 	text-align: center;
@@ -675,9 +636,11 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	color: #999;
 	font-weight: 500;
 }
+
 .weekday-weekend {
 	color: #ff3b30;
 }
+
 .theme-dark .weekday-cell {
 	color: #8e8e93;
 }
@@ -701,16 +664,20 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	box-sizing: border-box;
 	border-radius: 12rpx;
 }
+
 .date-cell--other .date-num {
 	color: #c0c0c0;
 }
+
 .theme-dark .date-cell--other .date-num {
 	color: #636366;
 }
+
 .date-cell--today {
 	background: rgba(0, 122, 255, 0.06);
 	border-radius: 14rpx;
 }
+
 .theme-dark .date-cell--today {
 	background: rgba(10, 132, 255, 0.2);
 }
@@ -721,6 +688,7 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	font-weight: 400;
 	line-height: 1;
 }
+
 .theme-dark .date-num {
 	color: #e5e5e7;
 }
@@ -729,6 +697,7 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	color: #007aff;
 	font-weight: 700;
 }
+
 .theme-dark .date-num--today {
 	color: #0a84ff;
 }
@@ -751,12 +720,14 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	right: 6rpx;
 	display: flex;
 }
+
 .person-dot {
 	width: 10rpx;
 	height: 10rpx;
 	border-radius: 50%;
 	margin-left: 3rpx;
 }
+
 .person-dot:first-child {
 	margin-left: 0;
 }
@@ -790,6 +761,7 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	font-weight: 600;
 	z-index: 100;
 }
+
 .theme-dark .today-fab {
 	background: #e5e5e7;
 	color: #1c1c1e;
@@ -813,6 +785,7 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 		transform 0.15s ease,
 		box-shadow 0.15s ease;
 }
+
 .ai-fab::before {
 	content: "";
 	position: absolute;
@@ -821,39 +794,41 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	bottom: -6rpx;
 	left: -6rpx;
 	border-radius: 50%;
-	background: linear-gradient(
-		135deg,
-		rgba(0, 122, 255, 0.35) 0%,
-		rgba(88, 86, 214, 0.25) 100%
-	);
+	background: linear-gradient(135deg,
+			rgba(0, 122, 255, 0.35) 0%,
+			rgba(88, 86, 214, 0.25) 100%);
 	z-index: -1;
 	animation: ai-halo 2.4s ease-in-out infinite;
 }
+
 .ai-fab:active {
 	transform: scale(0.92);
 	box-shadow: 0 6rpx 18rpx rgba(0, 122, 255, 0.3);
 }
+
 .ai-fab--recording {
 	background: linear-gradient(135deg, #ff3b30 0%, #ff6b35 100%);
 	box-shadow: 0 12rpx 32rpx rgba(255, 59, 48, 0.45);
 }
+
 .ai-fab--recording::before {
-	background: linear-gradient(
-		135deg,
-		rgba(255, 59, 48, 0.4) 0%,
-		rgba(255, 107, 53, 0.25) 100%
-	);
+	background: linear-gradient(135deg,
+			rgba(255, 59, 48, 0.4) 0%,
+			rgba(255, 107, 53, 0.25) 100%);
 	animation: ai-halo 1.2s ease-in-out infinite;
 }
+
 @keyframes ai-halo {
 	0% {
 		transform: scale(1);
 		opacity: 0.6;
 	}
+
 	50% {
 		transform: scale(1.08);
 		opacity: 0.2;
 	}
+
 	100% {
 		transform: scale(1);
 		opacity: 0.6;
@@ -873,6 +848,7 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	align-items: center;
 	justify-content: center;
 }
+
 .record-bubble {
 	width: 300rpx;
 	height: 300rpx;
@@ -884,6 +860,7 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	justify-content: center;
 	backdrop-filter: blur(6rpx);
 }
+
 .record-pulse {
 	position: relative;
 	width: 140rpx;
@@ -894,6 +871,7 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	align-items: center;
 	justify-content: center;
 }
+
 .record-ring {
 	position: absolute;
 	top: 50%;
@@ -905,21 +883,25 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	transform: translate(-50%, -50%);
 	animation: record-pulse 1.4s ease-out infinite;
 }
+
 .record-ring--2 {
 	animation-delay: 0.7s;
 }
+
 @keyframes record-pulse {
 	0% {
 		width: 140rpx;
 		height: 140rpx;
 		opacity: 0.8;
 	}
+
 	100% {
 		width: 260rpx;
 		height: 260rpx;
 		opacity: 0;
 	}
 }
+
 .record-text {
 	margin-top: 28rpx;
 	font-size: 28rpx;

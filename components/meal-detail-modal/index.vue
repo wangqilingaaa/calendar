@@ -1,16 +1,9 @@
 <template>
-	<view
-		class="modal-mask"
-		:class="{ 'modal-dark': isDark }"
-		v-if="visible"
-		@tap="$emit('close')"
-	>
+	<view class="modal-mask" :class="{ 'modal-dark': isDark }" v-if="visible" @tap="$emit('close')">
 		<view class="modal-sheet" @tap.stop>
 			<!-- 标题：日期 + 餐次 -->
 			<view class="sheet-head">
-				<text class="head-date"
-					>{{ weekdayLabel }} · {{ mealName }}</text
-				>
+				<text class="head-date">{{ weekdayLabel }} · {{ mealName }}</text>
 				<text class="head-weekday">{{ dateText }}</text>
 			</view>
 
@@ -21,25 +14,12 @@
 					<text v-if="!dishes.length" class="muted">— 暂无</text>
 				</view>
 				<view v-if="dishes.length" class="dish-list">
-					<view
-						v-for="(dish, i) in dishes"
-						:key="i"
-						class="dish-item"
-					>
+					<view v-for="(dish, i) in dishes" :key="i" class="dish-item">
 						<view class="dish-left" @tap="onToggle(i)">
-							<view
-								class="dish-check"
-								:class="{ 'dish-check--done': dish.done }"
-							>
-								<text v-if="dish.done" class="dish-tick"
-									>✓</text
-								>
+							<view class="dish-check" :class="{ 'dish-check--done': dish.done }">
+								<text v-if="dish.done" class="dish-tick">✓</text>
 							</view>
-							<text
-								class="dish-name"
-								:class="{ 'dish-name--done': dish.done }"
-								>{{ dish.name }}</text
-							>
+							<text class="dish-name" :class="{ 'dish-name--done': dish.done }">{{ dish.name }}</text>
 						</view>
 						<text class="del-btn" @tap.stop="onRemove(i)">x</text>
 					</view>
@@ -50,25 +30,14 @@
 			<view class="block">
 				<view class="block-title">添加</view>
 				<view class="add-bar">
-					<input
-						class="add-input"
-						v-model="addInput"
-						placeholder="输入菜名，如 番茄炒蛋"
-						confirm-type="done"
-						@confirm="onAdd"
-					/>
+					<input class="add-input" v-model="addInput" placeholder="输入菜名，如 番茄炒蛋" confirm-type="done" @confirm="onAdd" />
 					<text class="add-btn" @tap="onAdd">+</text>
 				</view>
 			</view>
 
 			<!-- 底部 -->
 			<view class="sheet-foot">
-				<text
-					v-if="dishes.length"
-					class="foot-link danger"
-					@tap="$emit('clear')"
-					>清空全部</text
-				>
+				<text v-if="dishes.length" class="foot-link danger" @tap="$emit('clear')">清空全部</text>
 				<text class="foot-link" @tap="$emit('close')">关闭</text>
 			</view>
 		</view>

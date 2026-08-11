@@ -24,43 +24,16 @@
 
 			<!-- 表单 -->
 			<view class="form">
-				<input
-					class="input"
-					v-model="username"
-					placeholder="请输入用户名"
-					:maxlength="20"
-				/>
-				<input
-					class="input"
-					v-model="password"
-					placeholder="请输入密码"
-					:password="true"
-					:maxlength="20"
-				/>
+				<input class="input" v-model="username" placeholder="请输入用户名" :maxlength="20" />
+				<input class="input" v-model="password" placeholder="请输入密码" :password="true" :maxlength="20" />
 				<!-- 注册时可选填身份标签 -->
-				<input
-					v-if="isRegister"
-					class="input"
-					v-model="identityTag"
-					placeholder="身份标签（选填）"
-					:maxlength="20"
-				/>
+				<input v-if="isRegister" class="input" v-model="identityTag" placeholder="身份标签（选填）" :maxlength="20" />
 				<!-- 注册时可选填性别 -->
 				<view v-if="isRegister" class="gender-row">
 					<text class="gender-label">性别（选填）</text>
 					<view class="gender-options">
-						<text
-							class="gender-tag"
-							:class="{ 'gender-tag--active': gender === '男' }"
-							@tap="toggleGender('男')"
-							>男</text
-						>
-						<text
-							class="gender-tag"
-							:class="{ 'gender-tag--active': gender === '女' }"
-							@tap="toggleGender('女')"
-							>女</text
-						>
+						<text class="gender-tag" :class="{ 'gender-tag--active': gender === '男' }" @tap="toggleGender('男')">男</text>
+						<text class="gender-tag" :class="{ 'gender-tag--active': gender === '女' }" @tap="toggleGender('女')">女</text>
 					</view>
 				</view>
 				<view class="submit-btn" @tap="handleSubmit">
@@ -167,6 +140,7 @@ async function handleWechatLogin() {
 	justify-content: center;
 	padding: 40rpx;
 }
+
 .login-dark {
 	background: #1c1c1e;
 }
@@ -180,21 +154,25 @@ async function handleWechatLogin() {
 	text-align: center;
 	margin-bottom: 60rpx;
 }
+
 .login-title {
 	font-size: 48rpx;
 	font-weight: 700;
 	color: #1a1a1a;
 	display: block;
 }
+
 .login-dark .login-title {
 	color: #e5e5e7;
 }
+
 .login-sub {
 	font-size: 26rpx;
 	color: #999;
 	margin-top: 12rpx;
 	display: block;
 }
+
 .login-dark .login-sub {
 	color: #8e8e93;
 }
@@ -212,9 +190,11 @@ async function handleWechatLogin() {
 	font-weight: 600;
 	box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.25);
 }
+
 .wechat-btn:active {
 	opacity: 0.85;
 }
+
 .wechat-icon {
 	width: 48rpx;
 	height: 48rpx;
@@ -234,19 +214,23 @@ async function handleWechatLogin() {
 	align-items: center;
 	margin: 40rpx 0;
 }
+
 .divider-line {
 	flex: 1;
 	height: 1rpx;
 	background: #eee;
 }
+
 .login-dark .divider-line {
 	background: #38383a;
 }
+
 .divider-text {
 	font-size: 22rpx;
 	color: #999;
 	padding: 0 24rpx;
 }
+
 .login-dark .divider-text {
 	color: #8e8e93;
 }
@@ -256,6 +240,7 @@ async function handleWechatLogin() {
 	display: flex;
 	flex-direction: column;
 }
+
 .input {
 	height: 100rpx;
 	border: 2rpx solid #eee;
@@ -266,11 +251,13 @@ async function handleWechatLogin() {
 	background: #f8f8f8;
 	color: #1a1a1a;
 }
+
 .login-dark .input {
 	background: #2c2c2e;
 	border-color: #48484a;
 	color: #e5e5e7;
 }
+
 .input:focus {
 	border-color: #007aff;
 	background: #fff;
@@ -288,9 +275,11 @@ async function handleWechatLogin() {
 	font-weight: 600;
 	margin-top: 12rpx;
 }
+
 .submit-btn:active {
 	opacity: 0.8;
 }
+
 .login-dark .submit-btn {
 	background: #e5e5e7;
 	color: #1c1c1e;
@@ -304,17 +293,21 @@ async function handleWechatLogin() {
 	margin-bottom: 20rpx;
 	padding: 0 16rpx;
 }
+
 .gender-label {
 	font-size: 26rpx;
 	color: #999;
 }
+
 .login-dark .gender-label {
 	color: #8e8e93;
 }
+
 .gender-options {
 	display: flex;
 	gap: 16rpx;
 }
+
 .gender-tag {
 	font-size: 26rpx;
 	color: #666;
@@ -323,11 +316,13 @@ async function handleWechatLogin() {
 	border: 2rpx solid #eee;
 	background: #f8f8f8;
 }
+
 .login-dark .gender-tag {
 	color: #c7c7cc;
 	border-color: #48484a;
 	background: #2c2c2e;
 }
+
 .gender-tag--active {
 	color: #fff !important;
 	background: #007aff !important;
@@ -339,10 +334,12 @@ async function handleWechatLogin() {
 	text-align: center;
 	margin-top: 36rpx;
 }
+
 .switch-link {
 	font-size: 26rpx;
 	color: #007aff;
 }
+
 .login-dark .switch-link {
 	color: #0a84ff;
 }
