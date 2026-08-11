@@ -35,6 +35,30 @@
 					:password="true"
 					:maxlength="20"
 				/>
+				<!-- 注册时可选填身份标签 -->
+				<input
+					v-if="isRegister"
+					class="input"
+					v-model="identityTag"
+					placeholder="身份标签（选填）"
+					:maxlength="20"
+				/>
+				<!-- 注册时可选填性别 -->
+				<view v-if="isRegister" class="gender-row">
+					<text class="gender-label">性别（选填）</text>
+					<view class="gender-options">
+						<text
+							class="gender-tag"
+							:class="{ 'gender-tag--active': gender === '男' }"
+							@tap="toggleGender('男')"
+						>男</text>
+						<text
+							class="gender-tag"
+							:class="{ 'gender-tag--active': gender === '女' }"
+							@tap="toggleGender('女')"
+						>女</text>
+					</view>
+				</view>
 				<view class="submit-btn" @tap="handleSubmit">
 					<text>{{ isRegister ? '注册' : '登录' }}</text>
 				</view>
@@ -68,6 +92,12 @@ export default {
 		const isRegister = ref(false)
 		const username = ref('')
 		const password = ref('')
+		const identityTag = ref('')
+		const gender = ref('')
+
+		function toggleGender(val) {
+			gender.value = gender.value === val ? '' : val
+		}
 
 		async function handleSubmit() {
 			if (!username.value.trim()) {
@@ -82,7 +112,12 @@ export default {
 			try {
 				let data
 				if (isRegister.value) {
-					data = await register(username.value.trim(), password.value)
+					data = await register(
+						username.value.trim(),
+						password.value,
+						identityTag.value.trim(),
+						gender.value
+					)
 					if (!data || !data.id) throw new Error('注册失败')
 					// 注册成功后自动登录
 					data = await login(username.value.trim(), password.value)
@@ -120,6 +155,7 @@ export default {
 		return {
 			isDark, isRegister,
 			username, password,
+			identityTag, gender, toggleGender,
 			handleSubmit, handleWechatLogin
 		}
 	}
@@ -248,6 +284,42 @@ export default {
 .login-dark .submit-btn {
 	background: #e5e5e7;
 	color: #1c1c1e;
+}
+
+/* 性别选择 */
+.gender-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 20rpx;
+	padding: 0 16rpx;
+}
+.gender-label {
+	font-size: 26rpx;
+	color: #999;
+}
+.login-dark .gender-label { color: #8e8e93; }
+.gender-options {
+	display: flex;
+	gap: 16rpx;
+}
+.gender-tag {
+	font-size: 26rpx;
+	color: #666;
+	padding: 10rpx 36rpx;
+	border-radius: 40rpx;
+	border: 2rpx solid #eee;
+	background: #f8f8f8;
+}
+.login-dark .gender-tag {
+	color: #c7c7cc;
+	border-color: #48484a;
+	background: #2c2c2e;
+}
+.gender-tag--active {
+	color: #fff !important;
+	background: #007aff !important;
+	border-color: #007aff !important;
 }
 
 /* 切换 */

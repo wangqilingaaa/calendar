@@ -35,12 +35,16 @@ export function getSpeechRecognitionManager() {
 /**
  * 调用后端解析自然语言为日记参数
  * @param {string} text 用户输入的自然语言
+ * @param {string} [myIdentity] 当前登录用户的 identity_tag；告诉 AI 文本里「我」对应谁
+ * @param {Array<{id: string, name: string}>} [persons] 可选的人物列表（identity_tag → 显示名），供 AI 映射到合法 person 值
  * @returns {Promise<{date: string, person: string, event: string, event_remark: string, attachments: array}>}
  */
-export function parseDiaryByText(text) {
+export function parseDiaryByText(text, myIdentity, persons) {
 	return post('/ai/diary/parse', {
 		text,
-		event_names: EVENT_NAMES
+		event_names: EVENT_NAMES,
+		my_identity: myIdentity || '',
+		persons: (persons || []).map(p => p.name)
 	})
 }
 

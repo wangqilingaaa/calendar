@@ -119,6 +119,7 @@
 			:events="selectedEvents"
 			:visible="modalVisible"
 			:status="selectedDate.status"
+			:persons="persons"
 			@close="closeModal"
 			@refresh="refreshCalendar"
 		/>
@@ -127,10 +128,12 @@
 
 <script>
 import { ref, computed, watch, provide, onMounted } from 'vue'
-import { getMonthData, getDateStatus, DATE_STATUSES, PERSONS, EVENT_TYPES } from '@/store/calendar.js'
+import { getMonthData, DATE_STATUSES, PERSONS, EVENT_TYPES } from '@/store/calendar.js'
+import { loadPersons } from '@/store/persons.js'
 import { getTheme, setTheme } from '@/store/theme.js'
 import { createDiary } from '@/api/diary.js'
 import { getSpeechRecognitionManager, parseDiaryByText } from '@/api/ai.js'
+import { getUser } from '@/store/auth.js'
 import AppIcon from '@/components/app-icon/index.vue'
 import DateDetailModal from '@/components/date-detail-modal/index.vue'
 import AiInputModal from '@/components/ai-input-modal/index.vue'
@@ -151,6 +154,16 @@ export default {
 			isDark.value = !isDark.value
 			setTheme(isDark.value ? 'dark' : 'light')
 		}
+
+		/* ---- 动态人物列表（当前用户 + 绑定用户的 identity_tag） ---- */
+		const persons = ref(PERSONS) // 兜底：加载前用硬编码列表
+		onMounted(async () => {
+			persons.value = await loadPersons()
+		})
+
+		// 当前登录用户的身份（identity_tag），告诉 AI 文本里的「我」是谁
+		const me = getUser()
+		const myTag = (me && (me.identity_tag || me.username)) || '我'
 
 		/* ---- AI 语音录入 ---- */
 		const recording = ref(false)
@@ -260,12 +273,28 @@ export default {
 		async function processAiText(text) {
 			try {
 				uni.showLoading({ title: 'AI 解析中...', mask: true })
-				const data = await parseDiaryByText(text)
+				const data = await parseDiaryByText(text, myTag, persons.value)
 				uni.hideLoading()
 				await executeAiAdd(data)
 			} catch (e) {
 				uni.hideLoading()
 			}
+		}
+
+		// 将 AI 返回的人物标识解析为 identity_tag（与 /diary 接口一致）
+		function resolvePerson(raw) {
+			if (!raw) return 'both'
+			const t = String(raw).trim()
+			if (t === 'both' || t === '共同') return 'both'
+			// 「我 / 自己 / me」统一映射到当前登录用户身份
+			if (t === '我' || t === '自己' || t.toLowerCase() === 'me') return myTag
+			// 精确匹配当前人物列表的 id（identity_tag）或 name
+			const hit = persons.value.find(p => p.id === t || p.name === t)
+			if (hit) return hit.name
+			// 兼容旧中文别名（老公/老婆），按名称匹配，失败则回退 共同
+			const byAlias = persons.value.find(p => p.name === t)
+			if (byAlias) return byAlias.name
+			return 'both'
 		}
 
 		async function executeAiAdd(data, originalText) {
@@ -278,9 +307,8 @@ export default {
 				return
 			}
 
-			// person 支持 id 或中文名
-			const personMap = { husband: 'husband', wife: 'wife', both: 'both', 老公: 'husband', 老婆: 'wife', 共同: 'both' }
-			const person = personMap[data.person] || 'both'
+			// person：把 AI 返回的标识解析为实际人物的 identity_tag（/diary 接口要求存 identity_tag）
+			const person = resolvePerson(data.person)
 
 			// event 必须是已定义的事件类型中文名
 			const type = EVENT_TYPES.find(t => t.name === data.event)
@@ -417,7 +445,7 @@ export default {
 					data.events.forEach(e => personSet.add(e.person || 'both'))
 				}
 				const personDots = [...personSet].map(pid => {
-					const p = PERSONS.find(p => p.id === pid)
+					const p = persons.value.find(p => p.id === pid)
 					return p ? { color: p.color } : { color: '#9B59B6' }
 				})
 
@@ -491,12 +519,12 @@ export default {
 			uni.navigateTo({ url: '/pages/weekly-meal/index' })
 		}
 
-		watch([currentYear, currentMonth], buildGrid, { immediate: true })
+		watch([currentYear, currentMonth, persons], buildGrid, { immediate: true })
 
 		return {
 			currentYear, currentMonth, weekdays,
 			gridCells, loading, selectedDate, selectedEvents, modalVisible,
-			isDark, isCurrentMonth, navBarStyle, monthDataRef,
+			isDark, isCurrentMonth, navBarStyle, monthDataRef, persons,
 			recording, recordTip, aiModalVisible,
 			selectDate, closeModal, refreshCalendar,
 			prevMonth, nextMonth, goToday, toggleTheme, goToStats, goToUser, goToMeal,

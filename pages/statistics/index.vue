@@ -84,6 +84,7 @@
 <script>
 import { ref, computed } from 'vue'
 import { getDateRangeEvents, aggregateByPersonThenType, PERSONS, dateKey } from '@/store/calendar.js'
+import { loadPersons } from '@/store/persons.js'
 import { getTheme } from '@/store/theme.js'
 import AppIcon from '@/components/app-icon/index.vue'
 
@@ -139,6 +140,9 @@ export default {
 		const stats = ref({ week: [], month: [] })
 		const activeDays = ref(0)
 
+		/* ---- 动态人物列表 ---- */
+		const persons = ref(PERSONS)
+
 		async function loadStats() {
 			const now = new Date()
 
@@ -158,13 +162,17 @@ export default {
 			)
 
 			stats.value = {
-				week: aggregateByPersonThenType(weekEvents),
-				month: aggregateByPersonThenType(monthEvents)
+				week: aggregateByPersonThenType(weekEvents, persons.value),
+				month: aggregateByPersonThenType(monthEvents, persons.value)
 			}
 			activeDays.value = new Set(weekEvents.map(e => e.date || '')).size
 		}
 
-		loadStats()
+		// 先加载动态人物，再加载统计
+		;(async () => {
+			persons.value = await loadPersons()
+			await loadStats()
+		})()
 
 		const personStats = computed(() => {
 			const list = stats.value[period.value]

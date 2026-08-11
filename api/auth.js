@@ -1,11 +1,21 @@
 /**
  * 认证相关 API
  */
-import { post, saveToken } from './request.js'
+import { post, put, saveToken } from './request.js'
 
-/** 注册 */
-export function register(username, password) {
-	return post('/user/register', { username, password }, { needAuth: false }).then(data => {
+/** 注册（identity_tag 和 gender 可选） */
+export function register(username, password, identity_tag, gender) {
+	const body = { username, password }
+	if (identity_tag) body.identity_tag = identity_tag
+	if (gender) body.gender = gender
+	return post('/user/register', body, { needAuth: false }).then(data => {
+		return data
+	})
+}
+
+/** 修改用户资料（identity_tag / gender，均可为空表示清除） */
+export function updateProfile(userId, data = {}) {
+	return put('/user/' + userId, data).then(data => {
 		return data
 	})
 }

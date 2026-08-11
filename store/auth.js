@@ -27,7 +27,20 @@ export function logout() {
 /** 登录成功后保存 */
 export function setAuth(token, user) {
 	saveToken(token)
-	saveUser({ id: user.id, username: user.username })
+	saveUser({
+		id: user.id,
+		username: user.username,
+		identity_tag: user.identity_tag || '',
+		gender: user.gender || ''
+	})
+}
+
+/** 局部更新用户信息（如修改 identity_tag / gender 后同步本地） */
+export function updateUserFields(fields = {}) {
+	const current = getUser() || {}
+	const merged = { ...current, ...fields }
+	saveUser(merged)
+	return merged
 }
 
 /** 检查登录状态 */

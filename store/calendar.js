@@ -1,11 +1,14 @@
 /**
  * 日历数据管理 — 全部操作走后端 API
  *
- * 本地仅保留：日期状态 (status) — 纯 UI 标记
+ * 日期状态 (status) 通过后端 API（putDiaryStatus）读写，本地无缓存。
  *
  * API 模型映射：
  *   Diary { ID, date, person, event, event_remark }
  *   Event { id(apiId), type, title, count, person }
+ *
+ * 人物：/diary 的 person 字段存 identity_tag（见 store/persons.js）；
+ *       老数据可能存 'husband'/'wife'，由 PERSONS 兜底显示。
  */
 
 import { createDiary, queryDiaryByDay, queryDiaryByMonth, deleteDiary } from '@/api/diary.js'
@@ -65,26 +68,6 @@ function diaryToEvent(d) {
 		person: d.person || 'both',
 		createdAt: d.CreatedAt || ''
 	}
-}
-
-/* ============ 日期状态（本地存储） ============ */
-const STATUS_KEY = 'cal_date_status'
-
-function loadStatus() {
-	try { const r = uni.getStorageSync(STATUS_KEY); return r ? JSON.parse(r) : {} } catch (_) { return {} }
-}
-function saveStatus(s) { uni.setStorageSync(STATUS_KEY, JSON.stringify(s)) }
-
-export function getDateStatus(year, month, day) {
-	const key = dateKey(year, month, day)
-	return loadStatus()[key] || 'normal'
-}
-
-export function setDateStatus(year, month, day, status) {
-	const key = dateKey(year, month, day)
-	const s = loadStatus()
-	s[key] = status
-	saveStatus(s)
 }
 
 /* ============ 事件 CRUD（全部异步） ============ */
@@ -199,16 +182,25 @@ export async function getDateRangeEvents(startKey, endKey) {
 	return all
 }
 
-/** 按人物→类别聚合 */
-export function aggregateByPersonThenType(events) {
+/** 按人物→类别聚合（persons 可传入动态列表，兜底 PERSONS） */
+export function aggregateByPersonThenType(events, persons = []) {
+	// 兼容老选项：以动态人物列表为主，补充 legacy PERSONS（老公/老婆/共同），使旧日记 person='husband'/'wife' 也能正确显示
+	const seed = persons.slice()
+	PERSONS.forEach(p => { if (!seed.find(s => s.id === p.id)) seed.push(p) })
+
 	const result = {}
-	PERSONS.forEach(p => {
+	seed.forEach(p => {
 		result[p.id] = { id: p.id, name: p.name, color: p.color, total: 0, types: {} }
 		EVENT_TYPES.forEach(t => { result[p.id].types[t.id] = { id: t.id, name: t.name, color: t.color, total: 0, countable: t.countable } })
 	})
 	events.forEach(ev => {
 		const pid = ev.person || 'both'
 		const tid = ev.type
+		// person 不在列表中时动态补一条，避免旧数据丢失
+		if (!result[pid]) {
+			result[pid] = { id: pid, name: pid, color: '#9B59B6', total: 0, types: {} }
+			EVENT_TYPES.forEach(t => { result[pid].types[t.id] = { id: t.id, name: t.name, color: t.color, total: 0, countable: t.countable } })
+		}
 		if (result[pid] && result[pid].types[tid]) {
 			result[pid].total++
 			result[pid].types[tid].total++
@@ -221,5 +213,3 @@ export function aggregateByPersonThenType(events) {
 			types: Object.values(p.types).filter(t => t.total > 0)
 		}))
 }
-
-export { dateKey as defaultDateKey }

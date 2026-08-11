@@ -62,9 +62,9 @@
 
 				<!-- 人物选择 -->
 				<view class="person-row">
-					<view v-for="p in persons" :key="p.id" class="person-chip" :class="{ active: addPerson === p.id }"
-						:style="addPerson === p.id ? { backgroundColor: p.color, borderColor: p.color, color: '#fff' } : { color: p.color, borderColor: p.color + '60' }"
-						@tap="addPerson = p.id">
+					<view v-for="p in persons" :key="p.id" class="person-chip" :class="{ active: addPerson === p.name }"
+						:style="addPerson === p.name ? { backgroundColor: p.color, borderColor: p.color, color: '#fff' } : { color: p.color, borderColor: p.color + '60' }"
+						@tap="addPerson = p.name">
 						<text>{{ p.name }}</text>
 					</view>
 				</view>
@@ -113,10 +113,11 @@
 		PERSONS,
 		dateKey
 	} from '@/store/calendar.js'
-	import {
-		getTheme
-	} from '@/store/theme.js'
-	import AppIcon from '@/components/app-icon/index.vue'
+import {
+	getTheme
+} from '@/store/theme.js'
+import { getUser } from '@/store/auth.js'
+import AppIcon from '@/components/app-icon/index.vue'
 import { putDiaryStatus } from '../../api/diary'
 
 	export default {
@@ -146,22 +147,29 @@ import { putDiaryStatus } from '../../api/diary'
 			visible: {
 				type: Boolean,
 				default: false
+			},
+			// 动态人物列表（来自当前用户 + 绑定用户的 identity_tag）
+			persons: {
+				type: Array,
+				default: () => PERSONS
 			}
 		},
 		emits: ['close', 'refresh'],
 		setup(props, {
 			emit
 		}) {
-			const statuses = DATE_STATUSES
-			const types = EVENT_TYPES
-			const persons = PERSONS
+		const statuses = DATE_STATUSES
+		const types = EVENT_TYPES
 
-			const isDark = ref(getTheme() === 'dark')
-			const currentStatus = ref('normal')
-			const events = ref([])
-			const addType = ref('water')
-			const addTitle = ref('')
-			const addPerson = ref('both')
+		const isDark = ref(getTheme() === 'dark')
+		const currentStatus = ref('normal')
+		const events = ref([])
+		const addType = ref('water')
+		const addTitle = ref('')
+		// 当前角色身份（登录用户）= 动态人物列表中的「自己」，默认选中它而非"共同"
+		const me = getUser()
+		const myTag = (me && (me.identity_tag || me.username)) || '我'
+		const addPerson = ref(myTag)
 
 			const weekdayLabel = computed(() => {
 				const d = new Date(props.year, props.month, props.day)
@@ -169,6 +177,9 @@ import { putDiaryStatus } from '../../api/diary'
 			})
 
 			const addPlaceholder = computed(() => '备注（选填）')
+
+		// 动态人物列表（由父组件传入，兜底 PERSONS）
+		const persons = computed(() => props.persons)
 
 			// 从 props.events 合并展示（可计数类型合并，不发起 API 请求）
 			function updateEvents() {
@@ -208,13 +219,13 @@ import { putDiaryStatus } from '../../api/diary'
 			}
 
 			watch(() => props.visible, (v) => {
-				if (v) {
-					addTitle.value = ''
-					addType.value = 'water'
-					addPerson.value = 'both'
-					currentStatus.value = props.status || 'normal'
-					updateEvents()
-				}
+			if (v) {
+				addTitle.value = ''
+				addType.value = 'water'
+				addPerson.value = myTag
+				currentStatus.value = props.status || 'normal'
+				updateEvents()
+			}
 			}, {
 				immediate: true
 			})
@@ -272,15 +283,15 @@ import { putDiaryStatus } from '../../api/diary'
 				return t ? t.countable : false
 			}
 
-			function personColor(pid) {
-				const p = persons.find(p => p.id === pid)
-				return p ? p.color : '#9B59B6'
-			}
+		function personColor(pid) {
+			const p = persons.value.find(p => p.id === pid) || PERSONS.find(p => p.id === pid)
+			return p ? p.color : '#9B59B6'
+		}
 
-			function personName(pid) {
-				const p = persons.find(p => p.id === pid)
-				return p ? p.name : '共同'
-			}
+		function personName(pid) {
+			const p = persons.value.find(p => p.name === pid) || PERSONS.find(p => p.name === pid)
+			return p ? p.name : '共同'
+		}
 
 			function formatTime(t) {
 				if (!t) return ''

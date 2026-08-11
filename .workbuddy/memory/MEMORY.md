@@ -13,6 +13,12 @@
 - 前端实际数据结构比方案精简：dish 仅 `{name, done}`，**未含** calorie/person/tag/date 字段；餐次枚举为 breakfast/lunch/dinner/snack。
 - 若后端接 Golang：当前前端「整周一块 JSON」结构不利于查询/统计，建议落库时展开为记录粒度（含 Date/Weekday/Meal/Person/Calorie/Done/时间戳）。详见 2026-08-04 日志的 model 提取。
 
+## 人物体系
+- **已改为动态**（2026-08-10）：person-row 不再写死"老公/老婆/共同"，改取当前用户 + 所有 active 绑定用户的 identity_tag。模块 `store/persons.js`。
+- person.id 用 user ID（字符串），"共同"固定 id='both'。新日记 person 字段存 user ID。
+- 旧 PERSONS（store/calendar.js 硬编码 husband/wife/both）保留作兜底默认值。
+- 绑定接口 GET /binding 返回里已含对方 identity_tag。**实际字段**（2026-08-10 确认）：每条记录含 `partner_user`（嵌套对象，含 id/username/identity_tag/gender）+ `partner_user_id` + `role`（requester/responder）+ `status`（active/pending）。
+
 ## 用户协作偏好
 - 问「做成什么样」类问题时，先看信息架构图 + UI 草图，再细化落地。
 - 角色：可切换「产品通」做产品规划/PRD，或技术实现模式做代码。
