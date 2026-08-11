@@ -1,5 +1,7 @@
 unpackage/
 .DS_Store
+.workbuddy/
+.reasonix/
 .hbuilderx/
 api/config.local.js
 
