@@ -82,7 +82,7 @@
 
 				<!-- 人物选择 -->
 				<view class="person-row">
-					<view v-for="p in persons" :key="p.id" class="person-chip" :class="{ active: addPerson === p.name }" :style="addPerson === p.name
+                                        <view v-for="p in persons" :key="p.id" class="person-chip" :class="{ active: addPerson === p.id }" :style="addPerson === p.id
 							? {
 								backgroundColor: p.color,
 								borderColor: p.color,
@@ -92,7 +92,7 @@
 								color: p.color,
 								borderColor: p.color + '60',
 							}
-						" @tap="addPerson = p.name">
+                                                " @tap="addPerson = p.id">
 						<text>{{ p.name }}</text>
 					</view>
 				</view>
@@ -140,6 +140,11 @@ import {
 	PERSONS,
 	dateKey,
 } from "@/store/calendar.js";
+import {
+        findPersonById,
+        normalizePersonId,
+        toPersonPayload,
+} from "@/store/persons.js";
 import { getTheme } from "@/store/theme.js";
 import { getUser } from "@/store/auth.js";
 import AppIcon from "@/components/app-icon/index.vue";
@@ -187,10 +192,11 @@ const currentStatus = ref("normal");
 const events = ref([]);
 const addType = ref("water");
 const addTitle = ref("");
-// 当前角色身份（登录用户）= 动态人物列表中的「自己」，默认选中它而非"共同"
+// 当前角色身份默认选中数据库 user.id；
+// identity_tag 仅用于展示，不参与前端主键流转。
 const me = getUser();
-const myTag = (me && (me.identity_tag || me.username)) || "我";
-const addPerson = ref(myTag);
+const myPersonId = (me && me.id) || "both";
+const addPerson = ref(myPersonId);
 
 const weekdayLabel = computed(() => {
 	const date = new Date(props.year, props.month, props.day);
@@ -212,20 +218,25 @@ function updateEvents() {
 
 	sourceEvents.forEach((event) => {
 		const type = types.find((item) => item.id === event.type);
+                const personId = normalizePersonId(
+                        event.person || "both",
+                        persons.value,
+                );
 		if (type && type.countable) {
-			const key =
-				event.type + "|" + (event.person || "both") + "|" + event.title;
+                        const key = event.type + "|" + personId + "|" + event.title;
 			if (typeMap[key]) {
 				typeMap[key].count++;
 			} else {
 				typeMap[key] = {
 					...event,
+                                        person: personId,
 					count: 1,
 				};
 			}
 		} else {
 			merged.push({
 				...event,
+                                person: personId,
 				count: 0,
 			});
 		}
@@ -247,7 +258,7 @@ watch(
 		if (visible) {
 			addTitle.value = "";
 			addType.value = "water";
-			addPerson.value = myTag;
+                        addPerson.value = myPersonId;
 			currentStatus.value = props.status || "normal";
 			updateEvents();
 		}
@@ -275,26 +286,29 @@ async function doAdd() {
 	if (!addType.value) return;
 	const type = types.find((item) => item.id === addType.value);
 	const title = addTitle.value.trim() || (type ? type.name : "");
+        const personPayload = toPersonPayload(addPerson.value, persons.value);
 	await addEvent(
 		props.year,
 		props.month,
 		props.day,
 		addType.value,
 		title,
-		addPerson.value,
+                personPayload,
 	);
 	addTitle.value = "";
 	emit("refresh");
 }
 
 async function incEvent(event) {
+        const personId = normalizePersonId(event.person || "both", persons.value);
+        const personPayload = toPersonPayload(personId, persons.value);
 	await addEvent(
 		props.year,
 		props.month,
 		props.day,
 		event.type,
 		event.title,
-		event.person || "both",
+                personPayload,
 	);
 	emit("refresh");
 }
@@ -329,17 +343,20 @@ function countableType(typeId) {
 	return type ? type.countable : false;
 }
 
-function personColor(personId) {
+function findPersonConfig(personKey) {
+        const personId = normalizePersonId(personKey, persons.value);
+        return findPersonById(personId, persons.value);
+}
+
+function personColor(personN) {
 	const person =
-		persons.value.find((item) => item.id === personId) ||
-		PERSONS.find((item) => item.id === personId);
+                findPersonConfig(personN);
 	return person ? person.color : "#9B59B6";
 }
 
-function personName(personId) {
+function personName(personN) {
 	const person =
-		persons.value.find((item) => item.name === personId) ||
-		PERSONS.find((item) => item.name === personId);
+                findPersonConfig(personN);
 	return person ? person.name : "共同";
 }
 

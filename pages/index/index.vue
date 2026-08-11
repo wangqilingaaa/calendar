@@ -100,7 +100,12 @@ import {
 	PERSONS,
 	EVENT_TYPES,
 } from "@/store/calendar.js";
-import { loadPersons } from "@/store/persons.js";
+import {
+        loadPersons,
+        findPersonById,
+        normalizePersonId,
+        toPersonPayload,
+} from "@/store/persons.js";
 import { getTheme, setTheme } from "@/store/theme.js";
 import { createDiary } from "@/api/diary.js";
 import { getSpeechRecognitionManager, parseDiaryByText } from "@/api/ai.js";
@@ -129,9 +134,11 @@ onMounted(async () => {
 	persons.value = await loadPersons();
 });
 
-// 当前登录用户的身份（identity_tag），告诉 AI 文本里的「我」是谁
+// 当前登录用户的身份标签仅用于 AI 语义理解；
+// 前端内部的人物主键仍统一使用数据库 id。
 const me = getUser();
 const myTag = (me && (me.identity_tag || me.username)) || "我";
+const myPersonId = (me && me.id) || "both";
 
 /* ---- AI 语音录入 ---- */
 const recording = ref(false);
@@ -250,23 +257,15 @@ async function processAiText(text) {
 	}
 }
 
-// 将 AI 返回的人物标识解析为 identity_tag（与 /diary 接口一致）
+// 将 AI 返回的人物标识解析为前端统一使用的数据库 person id
 function resolvePerson(raw) {
-	if (!raw) return "both";
-	const text = String(raw).trim();
-	if (text === "both" || text === "共同") return "both";
+        if (!raw) return "both";
+        const text = String(raw).trim();
 	// 「我 / 自己 / me」统一映射到当前登录用户身份
 	if (text === "我" || text === "自己" || text.toLowerCase() === "me")
-		return myTag;
-	// 精确匹配当前人物列表的 id（identity_tag）或 name
-	const hit = persons.value.find(
-		(person) => person.id === text || person.name === text,
-	);
-	if (hit) return hit.name;
-	// 兼容旧中文别名（老公/老婆），按名称匹配，失败则回退共同。
-	const byAlias = persons.value.find((person) => person.name === text);
-	if (byAlias) return byAlias.name;
-	return "both";
+                return myPersonId;
+        // 其余入口统一在边界层归一化为数据库 id，业务主链路只继续使用 id。
+        return normalizePersonId(text, persons.value);
 }
 
 async function executeAiAdd(data, originalText) {
@@ -279,8 +278,9 @@ async function executeAiAdd(data, originalText) {
 		return;
 	}
 
-	// person：把 AI 返回的标识解析为实际人物的 identity_tag（/diary 接口要求存 identity_tag）
-	const person = resolvePerson(data.person);
+        // person：先统一归一化为前端数据库 id，再转换为接口提交值。
+        const personId = resolvePerson(data.person);
+        const person = toPersonPayload(personId, persons.value);
 
 	// event 必须是已定义的事件类型中文名
 	const type = EVENT_TYPES.find((item) => item.name === data.event);
@@ -423,13 +423,17 @@ async function buildGrid() {
 
 		const personSet = new Set();
 		if (data) {
-			data.events.forEach((event) =>
-				personSet.add(event.person || "both"),
-			);
+                        data.events.forEach((event) => {
+                                const personId = normalizePersonId(
+                                        event.person || "both",
+                                        persons.value,
+                                );
+                                personSet.add(personId);
+                        });
 		}
 
 		const personDots = [...personSet].map((personId) => {
-			const person = persons.value.find((item) => item.id === personId);
+                        const person = findPersonById(personId, persons.value);
 			return person ? { color: person.color } : { color: "#9B59B6" };
 		});
 

@@ -7,8 +7,10 @@
  *   Diary { ID, date, person, event, event_remark }
  *   Event { id(apiId), type, title, count, person }
  *
- * 人物：/diary 的 person 字段存 identity_tag（见 store/persons.js）；
- *       老数据可能存 'husband'/'wife'，由 PERSONS 兜底显示。
+ * 人物：
+ * - 前端内部统一以数据库 user.id 作为人物主键；
+ * - /diary 的 person 字段仍可能返回 identity_tag / username / husband / wife / both；
+ * - 进入展示和统计前，会通过 normalizePersonId 归一化为统一的数据库 id。
  */
 
 import {
@@ -59,6 +61,39 @@ function typeNameById(id) {
 function typeIdByName(name) {
 	const t = EVENT_TYPES.find((t) => t.name === name);
 	return t ? t.id : "custom";
+}
+
+/**
+ * 仅供 calendar.js 内部统计使用的人物归一化工具。
+ *
+ * 这里不直接复用 store/persons.js 的实现，是为了避免 calendar.js
+ * 与 persons.js 之间产生循环依赖。规则保持一致：
+ * - 优先认数据库 id
+ * - 其次兼容动态人物里的 personValue / name
+ * - 最后兼容 legacy PERSONS
+ */
+function normalizePersonIdForStats(raw, persons = []) {
+        if (!raw) return "both";
+        const text = String(raw).trim();
+        if (!text) return "both";
+
+        const byId =
+                persons.find((item) => String(item.id) === text) ||
+                PERSONS.find((item) => String(item.id) === text) ||
+                null;
+        if (byId) return byId.id;
+
+        const byValue =
+                persons.find(
+                        (item) =>
+                                String(item.personValue || item.id) === text ||
+                                item.name === text,
+                ) ||
+                PERSONS.find((item) => item.name === text) ||
+                null;
+        if (byValue) return byValue.id;
+
+        return "both";
 }
 
 /* ============ API → 本地模型转换 ============ */
@@ -194,7 +229,8 @@ export async function getDateRangeEvents(startKey, endKey) {
 
 /** 按人物→类别聚合（persons 可传入动态列表，兜底 PERSONS） */
 export function aggregateByPersonThenType(events, persons = []) {
-	// 兼容老选项：以动态人物列表为主，补充 legacy PERSONS（老公/老婆/共同），使旧日记 person='husband'/'wife' 也能正确显示
+        // 兼容老选项：以动态人物列表为主，补充 legacy PERSONS（老公/老婆/共同），
+        // 让历史值在被 normalizePersonId 归一化后仍能正确显示。
 	const seed = persons.slice();
 	PERSONS.forEach((p) => {
 		if (!seed.find((s) => s.id === p.id)) seed.push(p);
@@ -220,9 +256,9 @@ export function aggregateByPersonThenType(events, persons = []) {
 		});
 	});
 	events.forEach((ev) => {
-		const pid = ev.person || "both";
+                const pid = normalizePersonIdForStats(ev.person || "both", persons);
 		const tid = ev.type;
-		// person 不在列表中时动态补一条，避免旧数据丢失
+                // 归一化后的 person id 不在列表中时动态补一条，避免异常数据丢失
 		if (!result[pid]) {
 			result[pid] = {
 				id: pid,
