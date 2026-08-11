@@ -5,7 +5,11 @@
 			<view class="top-left">
 				<text class="top-year">{{ currentYear }}</text>
 				<view class="top-theme" @tap="toggleTheme">
-					<app-icon :name="isDark ? 'moon' : 'sun'" :size="36" :color="isDark ? '#f1c40f' : '#f39c12'" />
+					<app-icon
+						:name="isDark ? 'moon' : 'sun'"
+						:size="36"
+						:color="isDark ? '#f1c40f' : '#f39c12'"
+					/>
 				</view>
 			</view>
 			<view class="top-right">
@@ -35,7 +39,8 @@
 				:key="wd"
 				class="weekday-cell"
 				:class="{ 'weekday-weekend': wd === '六' || wd === '日' }"
-			>{{ wd }}</text>
+				>{{ wd }}</text
+			>
 		</view>
 
 		<!-- ====== 日期网格 ====== -->
@@ -54,7 +59,8 @@
 				<text
 					class="date-num"
 					:class="{ 'date-num--today': cell.isToday }"
-				>{{ cell.day }}</text>
+					>{{ cell.day }}</text
+				>
 
 				<!-- 人物色点 -->
 				<view v-if="cell.personDots.length" class="person-dots">
@@ -67,9 +73,15 @@
 				</view>
 
 				<!-- 状态标记 -->
-				<view v-if="cell.status !== 'normal'" class="status-mark" :style="{ backgroundColor: cell.statusColor }"></view>
+				<view
+					v-if="cell.status !== 'normal'"
+					class="status-mark"
+					:style="{ backgroundColor: cell.statusColor }"
+				></view>
 				<!-- 计数角标 -->
-				<text v-if="cell.countTotal > 0" class="count-badge">{{ cell.countTotal }}</text>
+				<text v-if="cell.countTotal > 0" class="count-badge">{{
+					cell.countTotal
+				}}</text>
 			</view>
 		</view>
 
@@ -87,7 +99,11 @@
 			@touchend="handleAiTouchEnd"
 			@touchcancel="handleAiTouchEnd"
 		>
-			<app-icon name="ai" :size="40" :color="recording ? '#ff3b30' : '#fff'" />
+			<app-icon
+				name="ai"
+				:size="40"
+				:color="recording ? '#ff3b30' : '#fff'"
+			/>
 		</view>
 
 		<!-- ====== 录音中浮层 ====== -->
@@ -126,413 +142,444 @@
 	</view>
 </template>
 
-<script>
-import { ref, computed, watch, provide, onMounted } from 'vue'
-import { getMonthData, DATE_STATUSES, PERSONS, EVENT_TYPES } from '@/store/calendar.js'
-import { loadPersons } from '@/store/persons.js'
-import { getTheme, setTheme } from '@/store/theme.js'
-import { createDiary } from '@/api/diary.js'
-import { getSpeechRecognitionManager, parseDiaryByText } from '@/api/ai.js'
-import { getUser } from '@/store/auth.js'
-import AppIcon from '@/components/app-icon/index.vue'
-import DateDetailModal from '@/components/date-detail-modal/index.vue'
-import AiInputModal from '@/components/ai-input-modal/index.vue'
+<script setup>
+import { ref, computed, watch, provide, onMounted } from "vue";
+import {
+	getMonthData,
+	DATE_STATUSES,
+	PERSONS,
+	EVENT_TYPES,
+} from "@/store/calendar.js";
+import { loadPersons } from "@/store/persons.js";
+import { getTheme, setTheme } from "@/store/theme.js";
+import { createDiary } from "@/api/diary.js";
+import { getSpeechRecognitionManager, parseDiaryByText } from "@/api/ai.js";
+import { getUser } from "@/store/auth.js";
+import AppIcon from "@/components/app-icon/index.vue";
+import DateDetailModal from "@/components/date-detail-modal/index.vue";
+import AiInputModal from "@/components/ai-input-modal/index.vue";
 
-export default {
-	components: { AppIcon, DateDetailModal, AiInputModal },
-	setup() {
-		const now = new Date()
-		const currentYear = ref(now.getFullYear())
-		const currentMonth = ref(now.getMonth())
-		const weekdays = ['一', '二', '三', '四', '五', '六', '日']
+const now = new Date();
+const currentYear = ref(now.getFullYear());
+const currentMonth = ref(now.getMonth());
+const weekdays = ["一", "二", "三", "四", "五", "六", "日"];
 
-		/* ---- 主题 ---- */
-		const isDark = ref(getTheme() === 'dark')
-		provide('isDark', isDark)
+/* ---- 主题 ---- */
+const isDark = ref(getTheme() === "dark");
+provide("isDark", isDark);
 
-		function toggleTheme() {
-			isDark.value = !isDark.value
-			setTheme(isDark.value ? 'dark' : 'light')
-		}
+function toggleTheme() {
+	isDark.value = !isDark.value;
+	setTheme(isDark.value ? "dark" : "light");
+}
 
-		/* ---- 动态人物列表（当前用户 + 绑定用户的 identity_tag） ---- */
-		const persons = ref(PERSONS) // 兜底：加载前用硬编码列表
-		onMounted(async () => {
-			persons.value = await loadPersons()
-		})
+/* ---- 动态人物列表（当前用户 + 绑定用户的 identity_tag） ---- */
+const persons = ref(PERSONS); // 兜底：加载前用硬编码列表
+onMounted(async () => {
+	persons.value = await loadPersons();
+});
 
-		// 当前登录用户的身份（identity_tag），告诉 AI 文本里的「我」是谁
-		const me = getUser()
-		const myTag = (me && (me.identity_tag || me.username)) || '我'
+// 当前登录用户的身份（identity_tag），告诉 AI 文本里的「我」是谁
+const me = getUser();
+const myTag = (me && (me.identity_tag || me.username)) || "我";
 
-		/* ---- AI 语音录入 ---- */
-		const recording = ref(false)
-		const recordTip = ref('长按说话')
-		const recognitionManager = ref(null)
-		const recordStartTime = ref(0)
-		const longPressTriggered = ref(false)
-		const aiModalVisible = ref(false)
+/* ---- AI 语音录入 ---- */
+const recording = ref(false);
+const recordTip = ref("长按说话");
+const recognitionManager = ref(null);
+const recordStartTime = ref(0);
+const longPressTriggered = ref(false);
+const aiModalVisible = ref(false);
 
-		function todayKey() {
-			const t = new Date()
-			return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`
-		}
-
-		onMounted(() => {
-			// #ifdef MP-WEIXIN
-			recognitionManager.value = getSpeechRecognitionManager()
-			if (recognitionManager.value) {
-				recognitionManager.value.onStop((res) => {
-					if (!recording.value) return
-					recording.value = false
-					const duration = Date.now() - recordStartTime.value
-					if (duration < 500 || !res.result) {
-						uni.showToast({ title: '说话时间太短', icon: 'none' })
-						return
-					}
-					processAiText(res.result.trim())
-				})
-				recognitionManager.value.onError((err) => {
-					recording.value = false
-					uni.showToast({ title: '语音识别失败 ' + (err.msg || ''), icon: 'none', duration: 3000 })
-				})
+onMounted(() => {
+	// #ifdef MP-WEIXIN
+	recognitionManager.value = getSpeechRecognitionManager();
+	if (recognitionManager.value) {
+		recognitionManager.value.onStop((res) => {
+			if (!recording.value) return;
+			recording.value = false;
+			const duration = Date.now() - recordStartTime.value;
+			if (duration < 500 || !res.result) {
+				uni.showToast({ title: "说话时间太短", icon: "none" });
+				return;
 			}
-			// #endif
-		})
+			processAiText(res.result.trim());
+		});
+		recognitionManager.value.onError((err) => {
+			recording.value = false;
+			uni.showToast({
+				title: "语音识别失败 " + (err.msg || ""),
+				icon: "none",
+				duration: 3000,
+			});
+		});
+	}
+	// #endif
+});
 
-		async function startAiRecord() {
-			// #ifndef MP-WEIXIN
-			uni.showToast({ title: '当前平台暂不支持语音输入', icon: 'none' })
-			return
-			// #endif
+async function startAiRecord() {
+	let supported = false;
 
-			// #ifdef MP-WEIXIN
-			try {
-				await uni.authorize({ scope: 'scope.record' })
-			} catch (e) {
-				uni.showModal({
-					title: '需要录音权限',
-					content: '请在设置中允许使用麦克风',
-					showCancel: false
-				})
-				return
-			}
+	// #ifdef MP-WEIXIN
+	supported = true;
+	try {
+		await uni.authorize({ scope: "scope.record" });
+	} catch (e) {
+		uni.showModal({
+			title: "需要录音权限",
+			content: "请在设置中允许使用麦克风",
+			showCancel: false,
+		});
+		return;
+	}
 
-			if (!recognitionManager.value) {
-				uni.showToast({ title: '语音识别未初始化', icon: 'none' })
-				return
-			}
+	if (!recognitionManager.value) {
+		uni.showToast({ title: "语音识别未初始化", icon: "none" });
+		return;
+	}
 
-			recording.value = true
-			recordTip.value = '松开结束'
-			recordStartTime.value = Date.now()
-			recognitionManager.value.start({ lang: 'zh_CN' })
-			// #endif
+	recording.value = true;
+	recordTip.value = "松开结束";
+	recordStartTime.value = Date.now();
+	recognitionManager.value.start({ lang: "zh_CN" });
+	// #endif
+
+	if (!supported) {
+		uni.showToast({ title: "当前平台暂不支持语音输入", icon: "none" });
+	}
+}
+
+function stopAiRecord() {
+	// #ifdef MP-WEIXIN
+	if (recognitionManager.value) {
+		recognitionManager.value.stop();
+	}
+	// #endif
+}
+
+function handleAiLongPress() {
+	longPressTriggered.value = true;
+	startAiRecord();
+}
+
+function handleAiTouchEnd() {
+	if (recording.value) {
+		recordTip.value = "识别中...";
+		stopAiRecord();
+	}
+}
+
+function handleAiTap() {
+	if (longPressTriggered.value) {
+		longPressTriggered.value = false;
+		return;
+	}
+	// 短按打开自定义文字输入弹窗
+	aiModalVisible.value = true;
+}
+
+function closeAiModal() {
+	aiModalVisible.value = false;
+}
+
+function handleAiConfirm(text) {
+	aiModalVisible.value = false;
+	if (text && text.trim()) {
+		processAiText(text.trim());
+	}
+}
+
+async function processAiText(text) {
+	try {
+		uni.showLoading({ title: "AI 解析中...", mask: true });
+		const data = await parseDiaryByText(text, myTag, persons.value);
+		uni.hideLoading();
+		await executeAiAdd(data);
+	} catch (e) {
+		uni.hideLoading();
+	}
+}
+
+// 将 AI 返回的人物标识解析为 identity_tag（与 /diary 接口一致）
+function resolvePerson(raw) {
+	if (!raw) return "both";
+	const text = String(raw).trim();
+	if (text === "both" || text === "共同") return "both";
+	// 「我 / 自己 / me」统一映射到当前登录用户身份
+	if (text === "我" || text === "自己" || text.toLowerCase() === "me")
+		return myTag;
+	// 精确匹配当前人物列表的 id（identity_tag）或 name
+	const hit = persons.value.find(
+		(person) => person.id === text || person.name === text,
+	);
+	if (hit) return hit.name;
+	// 兼容旧中文别名（老公/老婆），按名称匹配，失败则回退共同。
+	const byAlias = persons.value.find((person) => person.name === text);
+	if (byAlias) return byAlias.name;
+	return "both";
+}
+
+async function executeAiAdd(data, originalText) {
+	if (!data || !data.date || !data.event) {
+		uni.showModal({
+			title: "AI 解析不完整",
+			content: "未返回日期或事件，请换个说法试试",
+			showCancel: false,
+		});
+		return;
+	}
+
+	// person：把 AI 返回的标识解析为实际人物的 identity_tag（/diary 接口要求存 identity_tag）
+	const person = resolvePerson(data.person);
+
+	// event 必须是已定义的事件类型中文名
+	const type = EVENT_TYPES.find((item) => item.name === data.event);
+	if (!type) {
+		uni.showModal({
+			title: "事件类型不支持",
+			content: `AI 返回 "${data.event}"，不在支持列表中`,
+			showCancel: false,
+		});
+		return;
+	}
+
+	try {
+		uni.showLoading({ title: "添加中...", mask: true });
+		await createDiary({
+			date: data.date,
+			person,
+			event: data.event,
+			eventRemark: data.event_remark || originalText || "",
+			attachments: Array.isArray(data.attachments)
+				? data.attachments
+				: [],
+		});
+		uni.hideLoading();
+		uni.showToast({ title: "添加成功", icon: "success" });
+		await refreshCalendar();
+	} catch (e) {
+		uni.hideLoading();
+	}
+}
+
+/* ---- 选中日期 ---- */
+const selectedDate = ref(null);
+const modalVisible = ref(false);
+
+/* ---- 是否是当前月 ---- */
+const isCurrentMonth = computed(() => {
+	const today = new Date();
+	return (
+		currentYear.value === today.getFullYear() &&
+		currentMonth.value === today.getMonth()
+	);
+});
+
+/* ---- 状态栏 & 胶囊按钮适配（微信 / APK 兼容） ---- */
+const navBarStyle = computed(() => {
+	const sys = uni.getSystemInfoSync();
+	const statusBarHeight = sys.statusBarHeight || 0;
+	try {
+		// #ifdef MP-WEIXIN
+		const menu = uni.getMenuButtonBoundingClientRect();
+		if (menu && menu.bottom) {
+			const navHeight = menu.bottom + 8;
+			const padRight = sys.windowWidth - menu.left + 12;
+			return {
+				paddingTop: statusBarHeight + "px",
+				height: navHeight - statusBarHeight + "px",
+				lineHeight: menu.height + "px",
+				paddingLeft: "20px",
+				paddingRight: padRight + "px",
+			};
 		}
-
-		function stopAiRecord() {
-			// #ifdef MP-WEIXIN
-			if (recognitionManager.value) {
-				recognitionManager.value.stop()
-			}
-			// #endif
-		}
-
-		function handleAiLongPress() {
-			longPressTriggered.value = true
-			startAiRecord()
-		}
-
-		function handleAiTouchEnd() {
-			if (recording.value) {
-				recordTip.value = '识别中...'
-				stopAiRecord()
-			}
-		}
-
-		function handleAiTap() {
-			if (longPressTriggered.value) {
-				longPressTriggered.value = false
-				return
-			}
-			// 短按打开自定义文字输入弹窗
-			aiModalVisible.value = true
-		}
-
-		function closeAiModal() {
-			aiModalVisible.value = false
-		}
-
-		function handleAiConfirm(text) {
-			aiModalVisible.value = false
-			if (text && text.trim()) {
-				processAiText(text.trim())
-			}
-		}
-
-		async function processAiText(text) {
-			try {
-				uni.showLoading({ title: 'AI 解析中...', mask: true })
-				const data = await parseDiaryByText(text, myTag, persons.value)
-				uni.hideLoading()
-				await executeAiAdd(data)
-			} catch (e) {
-				uni.hideLoading()
-			}
-		}
-
-		// 将 AI 返回的人物标识解析为 identity_tag（与 /diary 接口一致）
-		function resolvePerson(raw) {
-			if (!raw) return 'both'
-			const t = String(raw).trim()
-			if (t === 'both' || t === '共同') return 'both'
-			// 「我 / 自己 / me」统一映射到当前登录用户身份
-			if (t === '我' || t === '自己' || t.toLowerCase() === 'me') return myTag
-			// 精确匹配当前人物列表的 id（identity_tag）或 name
-			const hit = persons.value.find(p => p.id === t || p.name === t)
-			if (hit) return hit.name
-			// 兼容旧中文别名（老公/老婆），按名称匹配，失败则回退 共同
-			const byAlias = persons.value.find(p => p.name === t)
-			if (byAlias) return byAlias.name
-			return 'both'
-		}
-
-		async function executeAiAdd(data, originalText) {
-			if (!data || !data.date || !data.event) {
-				uni.showModal({
-					title: 'AI 解析不完整',
-					content: '未返回日期或事件，请换个说法试试',
-					showCancel: false
-				})
-				return
-			}
-
-			// person：把 AI 返回的标识解析为实际人物的 identity_tag（/diary 接口要求存 identity_tag）
-			const person = resolvePerson(data.person)
-
-			// event 必须是已定义的事件类型中文名
-			const type = EVENT_TYPES.find(t => t.name === data.event)
-			if (!type) {
-				uni.showModal({
-					title: '事件类型不支持',
-					content: `AI 返回 "${data.event}"，不在支持列表中`,
-					showCancel: false
-				})
-				return
-			}
-
-			try {
-				uni.showLoading({ title: '添加中...', mask: true })
-				await createDiary({
-					date: data.date,
-					person,
-					event: data.event,
-					eventRemark: data.event_remark || originalText || '',
-					attachments: Array.isArray(data.attachments) ? data.attachments : []
-				})
-				uni.hideLoading()
-				uni.showToast({ title: '添加成功', icon: 'success' })
-				await refreshCalendar()
-			} catch (e) {
-				uni.hideLoading()
-			}
-		}
-
-		/* ---- 选中日期 ---- */
-		const selectedDate = ref(null)
-		const modalVisible = ref(false)
-
-		/* ---- 是否是当前月 ---- */
-		const isCurrentMonth = computed(() => {
-			const t = new Date()
-			return currentYear.value === t.getFullYear() && currentMonth.value === t.getMonth()
-		})
-
-		/* ---- 状态栏 & 胶囊按钮适配（微信 / APK 兼容） ---- */
-		const navBarStyle = computed(() => {
-			const sys = uni.getSystemInfoSync()
-			const statusBarHeight = sys.statusBarHeight || 0
-			try {
-				// #ifdef MP-WEIXIN
-				const menu = uni.getMenuButtonBoundingClientRect()
-				if (menu && menu.bottom) {
-					const navHeight = menu.bottom + 8
-					const padRight = sys.windowWidth - menu.left + 12
-					return {
-						paddingTop: statusBarHeight + 'px',
-						height: (navHeight - statusBarHeight) + 'px',
-						lineHeight: menu.height + 'px',
-						paddingLeft: '20px',
-						paddingRight: padRight + 'px'
-					}
-				}
-				// #endif
-				// APK / H5 回退：留出状态栏高度 + 默认导航栏 44px
-				return {
-					paddingTop: statusBarHeight + 'px',
-					height: '44px',
-					lineHeight: '44px',
-					paddingLeft: '20px',
-					paddingRight: '20px'
-				}
-			} catch (e) {
-				return {
-					paddingTop: statusBarHeight + 'px',
-					height: '44px',
-					lineHeight: '44px',
-					paddingLeft: '20px',
-					paddingRight: '20px'
-				}
-			}
-		})
-
-		/* ====== 生成日历网格 ====== */
-		const gridCells = ref([])
-		const loading = ref(false)
-		const monthDataRef = ref({}) // 缓存当月数据
-
-		async function buildGrid() {
-			const year = currentYear.value
-			const month = currentMonth.value
-			const today = new Date()
-			const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-
-			const firstDay = new Date(year, month, 1).getDay()
-			const startOffset = firstDay === 0 ? 6 : firstDay - 1
-			const daysInMonth = new Date(year, month + 1, 0).getDate()
-			const daysInPrevMonth = new Date(year, month, 0).getDate()
-
-			loading.value = true
-			const monthData = await getMonthData(year, month)
-			monthDataRef.value = monthData
-			loading.value = false
-
-			const cells = []
-			const totalCells = 42
-
-			for (let i = 0; i < totalCells; i++) {
-				let day, isCurrentMonth, dateYear, dateMonth
-
-				if (i < startOffset) {
-					day = daysInPrevMonth - startOffset + i + 1
-					isCurrentMonth = false
-					dateYear = month === 0 ? year - 1 : year
-					dateMonth = month === 0 ? 11 : month - 1
-				} else if (i - startOffset >= daysInMonth) {
-					day = i - startOffset - daysInMonth + 1
-					isCurrentMonth = false
-					dateYear = month === 11 ? year + 1 : year
-					dateMonth = month === 11 ? 0 : month + 1
-				} else {
-					day = i - startOffset + 1
-					isCurrentMonth = true
-					dateYear = year
-					dateMonth = month
-				}
-
-				const mm = String(dateMonth + 1).padStart(2, '0')
-				const dd = String(day).padStart(2, '0')
-				const key = `${dateYear}-${mm}-${dd}`
-				const data = monthData[key]
-				const status = (data && data?.status?.status)
-
-				const statusDef = status
-					? DATE_STATUSES.find(s => s.id === status) || DATE_STATUSES[0]
-					: DATE_STATUSES[0]
-
-				const personSet = new Set()
-				if (data) {
-					data.events.forEach(e => personSet.add(e.person || 'both'))
-				}
-				const personDots = [...personSet].map(pid => {
-					const p = persons.value.find(p => p.id === pid)
-					return p ? { color: p.color } : { color: '#9B59B6' }
-				})
-
-				const countTotal = data
-					? data.events.length
-					: 0
-					console.log(data)
-				cells.push({
-					year: dateYear, month: dateMonth, day, isCurrentMonth,
-					isToday: key === todayKey,
-					key, status: status || 'normal',
-					statusColor: statusDef.color !== 'transparent' ? statusDef.color : '',
-					personDots, countTotal,
-
-				})
-			}
-
-			gridCells.value = cells
-		}
-
-		/* ====== 选中日期的事件（从缓存取，不额外请求） ====== */
-		const selectedEvents = computed(() => {
-			if (!selectedDate.value) return []
-			const key = `${selectedDate.value.year}-${String(selectedDate.value.month + 1).padStart(2, '0')}-${String(selectedDate.value.day).padStart(2, '0')}`
-			const data = monthDataRef.value[key]
-			return data ? data.events : []
-		})
-
-		/* ====== 选择日期 ====== */
-		function selectDate(cell) {
-			selectedDate.value = { year: cell.year, month: cell.month, day: cell.day, status: cell.status }
-			modalVisible.value = true
-		}
-		function closeModal() { modalVisible.value = false }
-		async function refreshCalendar() {
-			await buildGrid()
-			// 同步更新弹窗日期状态，避免关闭重开后显示旧状态
-			if (selectedDate.value) {
-				const cell = gridCells.value.find(c =>
-					c.year === selectedDate.value.year &&
-					c.month === selectedDate.value.month &&
-					c.day === selectedDate.value.day
-				)
-				if (cell) {
-					selectedDate.value = { ...selectedDate.value, status: cell.status }
-				}
-			}
-		}
-
-		/* ====== 月份切换 ====== */
-		function prevMonth() {
-			if (currentMonth.value === 0) { currentYear.value--; currentMonth.value = 11 }
-			else { currentMonth.value-- }
-		}
-		function nextMonth() {
-			if (currentMonth.value === 11) { currentYear.value++; currentMonth.value = 0 }
-			else { currentMonth.value++ }
-		}
-		function goToday() {
-			const t = new Date()
-			currentYear.value = t.getFullYear()
-			currentMonth.value = t.getMonth()
-		}
-		function goToStats() {
-			uni.navigateTo({ url: '/pages/statistics/index' })
-		}
-		function goToUser() {
-			uni.navigateTo({ url: '/pages/user/index' })
-		}
-		function goToMeal() {
-			uni.navigateTo({ url: '/pages/weekly-meal/index' })
-		}
-
-		watch([currentYear, currentMonth, persons], buildGrid, { immediate: true })
-
+		// #endif
+		// APK / H5 回退：留出状态栏高度 + 默认导航栏 44px
 		return {
-			currentYear, currentMonth, weekdays,
-			gridCells, loading, selectedDate, selectedEvents, modalVisible,
-			isDark, isCurrentMonth, navBarStyle, monthDataRef, persons,
-			recording, recordTip, aiModalVisible,
-			selectDate, closeModal, refreshCalendar,
-			prevMonth, nextMonth, goToday, toggleTheme, goToStats, goToUser, goToMeal,
-			handleAiTap, handleAiLongPress, handleAiTouchEnd,
-			closeAiModal, handleAiConfirm
+			paddingTop: statusBarHeight + "px",
+			height: "44px",
+			lineHeight: "44px",
+			paddingLeft: "20px",
+			paddingRight: "20px",
+		};
+	} catch (e) {
+		return {
+			paddingTop: statusBarHeight + "px",
+			height: "44px",
+			lineHeight: "44px",
+			paddingLeft: "20px",
+			paddingRight: "20px",
+		};
+	}
+});
+
+/* ====== 生成日历网格 ====== */
+const gridCells = ref([]);
+const loading = ref(false);
+const monthDataRef = ref({}); // 缓存当月数据
+
+async function buildGrid() {
+	const year = currentYear.value;
+	const month = currentMonth.value;
+	const today = new Date();
+	const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+	const firstDay = new Date(year, month, 1).getDay();
+	const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+	const daysInMonth = new Date(year, month + 1, 0).getDate();
+	const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+	loading.value = true;
+	const monthData = await getMonthData(year, month);
+	monthDataRef.value = monthData;
+	loading.value = false;
+
+	const cells = [];
+	const totalCells = 42;
+
+	for (let i = 0; i < totalCells; i++) {
+		let day;
+		let isCurrentMonthCell;
+		let dateYear;
+		let dateMonth;
+
+		if (i < startOffset) {
+			day = daysInPrevMonth - startOffset + i + 1;
+			isCurrentMonthCell = false;
+			dateYear = month === 0 ? year - 1 : year;
+			dateMonth = month === 0 ? 11 : month - 1;
+		} else if (i - startOffset >= daysInMonth) {
+			day = i - startOffset - daysInMonth + 1;
+			isCurrentMonthCell = false;
+			dateYear = month === 11 ? year + 1 : year;
+			dateMonth = month === 11 ? 0 : month + 1;
+		} else {
+			day = i - startOffset + 1;
+			isCurrentMonthCell = true;
+			dateYear = year;
+			dateMonth = month;
+		}
+
+		const mm = String(dateMonth + 1).padStart(2, "0");
+		const dd = String(day).padStart(2, "0");
+		const key = `${dateYear}-${mm}-${dd}`;
+		const data = monthData[key];
+		const status = data?.status?.status;
+
+		const statusDef = status
+			? DATE_STATUSES.find((item) => item.id === status) ||
+				DATE_STATUSES[0]
+			: DATE_STATUSES[0];
+
+		const personSet = new Set();
+		if (data) {
+			data.events.forEach((event) =>
+				personSet.add(event.person || "both"),
+			);
+		}
+
+		const personDots = [...personSet].map((personId) => {
+			const person = persons.value.find((item) => item.id === personId);
+			return person ? { color: person.color } : { color: "#9B59B6" };
+		});
+
+		const countTotal = data ? data.events.length : 0;
+
+		cells.push({
+			year: dateYear,
+			month: dateMonth,
+			day,
+			isCurrentMonth: isCurrentMonthCell,
+			isToday: key === todayKey,
+			key,
+			status: status || "normal",
+			statusColor:
+				statusDef.color !== "transparent" ? statusDef.color : "",
+			personDots,
+			countTotal,
+		});
+	}
+
+	gridCells.value = cells;
+}
+
+/* ====== 选中日期的事件（从缓存取，不额外请求） ====== */
+const selectedEvents = computed(() => {
+	if (!selectedDate.value) return [];
+	const key = `${selectedDate.value.year}-${String(selectedDate.value.month + 1).padStart(2, "0")}-${String(selectedDate.value.day).padStart(2, "0")}`;
+	const data = monthDataRef.value[key];
+	return data ? data.events : [];
+});
+
+/* ====== 选择日期 ====== */
+function selectDate(cell) {
+	selectedDate.value = {
+		year: cell.year,
+		month: cell.month,
+		day: cell.day,
+		status: cell.status,
+	};
+	modalVisible.value = true;
+}
+
+function closeModal() {
+	modalVisible.value = false;
+}
+
+async function refreshCalendar() {
+	await buildGrid();
+	// 同步更新弹窗日期状态，避免关闭重开后显示旧状态
+	if (selectedDate.value) {
+		const cell = gridCells.value.find(
+			(item) =>
+				item.year === selectedDate.value.year &&
+				item.month === selectedDate.value.month &&
+				item.day === selectedDate.value.day,
+		);
+		if (cell) {
+			selectedDate.value = { ...selectedDate.value, status: cell.status };
 		}
 	}
 }
+
+/* ====== 月份切换 ====== */
+function prevMonth() {
+	if (currentMonth.value === 0) {
+		currentYear.value--;
+		currentMonth.value = 11;
+	} else {
+		currentMonth.value--;
+	}
+}
+
+function nextMonth() {
+	if (currentMonth.value === 11) {
+		currentYear.value++;
+		currentMonth.value = 0;
+	} else {
+		currentMonth.value++;
+	}
+}
+
+function goToday() {
+	const today = new Date();
+	currentYear.value = today.getFullYear();
+	currentMonth.value = today.getMonth();
+}
+
+function goToStats() {
+	uni.navigateTo({ url: "/pages/statistics/index" });
+}
+
+function goToUser() {
+	uni.navigateTo({ url: "/pages/user/index" });
+}
+
+function goToMeal() {
+	uni.navigateTo({ url: "/pages/weekly-meal/index" });
+}
+
+watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 </script>
 
 <style lang="scss" scoped>
@@ -566,7 +613,9 @@ export default {
 	font-weight: 700;
 	color: #1a1a1a;
 }
-.theme-dark .top-year { color: #e5e5e7; }
+.theme-dark .top-year {
+	color: #e5e5e7;
+}
 
 .top-right {
 	display: flex;
@@ -581,7 +630,9 @@ export default {
 	border-radius: 50%;
 	background: #f8f8f8;
 }
-.theme-dark .top-btn { background: #2c2c2e; }
+.theme-dark .top-btn {
+	background: #2c2c2e;
+}
 
 /* ====== 月份导航 ====== */
 .month-nav {
@@ -597,7 +648,9 @@ export default {
 	padding: 0 36rpx;
 	line-height: 1;
 }
-.theme-dark .nav-arrow { color: #8e8e93; }
+.theme-dark .nav-arrow {
+	color: #8e8e93;
+}
 
 .nav-title {
 	font-size: 36rpx;
@@ -606,7 +659,9 @@ export default {
 	text-align: center;
 	width: 120rpx;
 }
-.theme-dark .nav-title { color: #e5e5e7; }
+.theme-dark .nav-title {
+	color: #e5e5e7;
+}
 
 /* ====== 星期行 ====== */
 .weekday-row {
@@ -620,8 +675,12 @@ export default {
 	color: #999;
 	font-weight: 500;
 }
-.weekday-weekend { color: #ff3b30; }
-.theme-dark .weekday-cell { color: #8e8e93; }
+.weekday-weekend {
+	color: #ff3b30;
+}
+.theme-dark .weekday-cell {
+	color: #8e8e93;
+}
 
 /* ====== 日期网格 ====== */
 .calendar-grid {
@@ -649,11 +708,11 @@ export default {
 	color: #636366;
 }
 .date-cell--today {
-	background: rgba(0,122,255,0.06);
+	background: rgba(0, 122, 255, 0.06);
 	border-radius: 14rpx;
 }
 .theme-dark .date-cell--today {
-	background: rgba(10,132,255,0.2);
+	background: rgba(10, 132, 255, 0.2);
 }
 
 .date-num {
@@ -662,13 +721,17 @@ export default {
 	font-weight: 400;
 	line-height: 1;
 }
-.theme-dark .date-num { color: #e5e5e7; }
+.theme-dark .date-num {
+	color: #e5e5e7;
+}
 
 .date-num--today {
 	color: #007aff;
 	font-weight: 700;
 }
-.theme-dark .date-num--today { color: #0a84ff; }
+.theme-dark .date-num--today {
+	color: #0a84ff;
+}
 
 /* 状态标记(底部小横条) */
 .status-mark {
@@ -694,7 +757,9 @@ export default {
 	border-radius: 50%;
 	margin-left: 3rpx;
 }
-.person-dot:first-child { margin-left: 0; }
+.person-dot:first-child {
+	margin-left: 0;
+}
 
 /* 计数角标(左上角) */
 .count-badge {
@@ -704,7 +769,7 @@ export default {
 	font-size: 18rpx;
 	font-weight: 700;
 	color: #ff9500;
-	background: rgba(255,149,0,0.12);
+	background: rgba(255, 149, 0, 0.12);
 	border-radius: 14rpx;
 	padding: 2rpx 8rpx;
 	text-align: center;
@@ -744,17 +809,23 @@ export default {
 	justify-content: center;
 	box-shadow: 0 12rpx 32rpx rgba(0, 122, 255, 0.38);
 	z-index: 100;
-	transition: transform .15s ease, box-shadow .15s ease;
+	transition:
+		transform 0.15s ease,
+		box-shadow 0.15s ease;
 }
 .ai-fab::before {
-	content: '';
+	content: "";
 	position: absolute;
 	top: -6rpx;
 	right: -6rpx;
 	bottom: -6rpx;
 	left: -6rpx;
 	border-radius: 50%;
-	background: linear-gradient(135deg, rgba(0, 122, 255, 0.35) 0%, rgba(88, 86, 214, 0.25) 100%);
+	background: linear-gradient(
+		135deg,
+		rgba(0, 122, 255, 0.35) 0%,
+		rgba(88, 86, 214, 0.25) 100%
+	);
 	z-index: -1;
 	animation: ai-halo 2.4s ease-in-out infinite;
 }
@@ -767,13 +838,26 @@ export default {
 	box-shadow: 0 12rpx 32rpx rgba(255, 59, 48, 0.45);
 }
 .ai-fab--recording::before {
-	background: linear-gradient(135deg, rgba(255, 59, 48, 0.4) 0%, rgba(255, 107, 53, 0.25) 100%);
+	background: linear-gradient(
+		135deg,
+		rgba(255, 59, 48, 0.4) 0%,
+		rgba(255, 107, 53, 0.25) 100%
+	);
 	animation: ai-halo 1.2s ease-in-out infinite;
 }
 @keyframes ai-halo {
-	0% { transform: scale(1); opacity: 0.6; }
-	50% { transform: scale(1.08); opacity: 0.2; }
-	100% { transform: scale(1); opacity: 0.6; }
+	0% {
+		transform: scale(1);
+		opacity: 0.6;
+	}
+	50% {
+		transform: scale(1.08);
+		opacity: 0.2;
+	}
+	100% {
+		transform: scale(1);
+		opacity: 0.6;
+	}
 }
 
 /* ====== 录音中浮层 ====== */
@@ -825,8 +909,16 @@ export default {
 	animation-delay: 0.7s;
 }
 @keyframes record-pulse {
-	0% { width: 140rpx; height: 140rpx; opacity: 0.8; }
-	100% { width: 260rpx; height: 260rpx; opacity: 0; }
+	0% {
+		width: 140rpx;
+		height: 140rpx;
+		opacity: 0.8;
+	}
+	100% {
+		width: 260rpx;
+		height: 260rpx;
+		opacity: 0;
+	}
 }
 .record-text {
 	margin-top: 28rpx;

@@ -11,35 +11,35 @@
  *   role            — 'requester' | 'responder'
  *   status          — 'active' | 'pending'
  */
-import { getUser } from '@/store/auth.js'
-import { getBindings } from '@/api/binding.js'
+import { getUser } from "@/store/auth.js";
+import { getBindings } from "@/api/binding.js";
 
 /** 人物配色盘 — 按顺序循环分配 */
 export const PERSON_COLORS = [
-	'#4A90D9', // 蓝
-	'#E884A6', // 粉
-	'#9B59B6', // 紫
-	'#FF6B6B', // 红
-	'#4CAF50', // 绿
-	'#FF9800'  // 橙
-]
+	"#4A90D9", // 蓝
+	"#E884A6", // 粉
+	"#9B59B6", // 紫
+	"#FF6B6B", // 红
+	"#4CAF50", // 绿
+	"#FF9800", // 橙
+];
 
 /** 兜底人物列表（未登录或加载失败时） */
 export const DEFAULT_PERSONS = Object.freeze([
-	{ id: 'both', name: '共同', color: PERSON_COLORS[2] }
-])
+	{ id: "both", name: "共同", color: PERSON_COLORS[2] },
+]);
 
 /**
  * 从绑定记录中提取对方 identity_tag
  */
 function extractPartnerTag(b) {
 	if (b.partner_user && b.partner_user.identity_tag) {
-		return b.partner_user.identity_tag
+		return b.partner_user.identity_tag;
 	}
 	if (b.partner_user && b.partner_user.username) {
-		return b.partner_user.username
+		return b.partner_user.username;
 	}
-	return ''
+	return "";
 }
 
 /**
@@ -54,44 +54,45 @@ function extractPartnerTag(b) {
  * @returns {Promise<Array<{id: string, name: string, color: string}>>}
  */
 export async function loadPersons() {
-	const user = getUser()
-	if (!user || !user.id) return [...DEFAULT_PERSONS]
+	const user = getUser();
+	if (!user || !user.id) return [...DEFAULT_PERSONS];
 
-	const persons = []
+	const persons = [];
 
 	// 1. 自己（id = identity_tag，兜底用 username / "我"）
-	const selfTag = user.identity_tag || user.username || '我'
+	const selfTag = user.identity_tag || user.username || "我";
 	persons.push({
 		id: user.id,
 		name: selfTag,
-		color: PERSON_COLORS[0]
-	})
+		color: PERSON_COLORS[0],
+	});
 
 	// 2. 绑定的用户（仅 active 状态），id 同样用对方 identity_tag
 	try {
-		const result = await getBindings()
-		const list = (result && result.list) ? result.list : []
-		const active = list.filter(b => b.status === 'active')
+		const result = await getBindings();
+		const list = result && result.list ? result.list : [];
+		const active = list.filter((b) => b.status === "active");
 
 		active.forEach((b, i) => {
-			const fallbackId = b.partner_user_id || (b.partner_user && b.partner_user.id)
-			const tag = extractPartnerTag(b) || ('用户' + fallbackId)
+			const fallbackId =
+				b.partner_user_id || (b.partner_user && b.partner_user.id);
+			const tag = extractPartnerTag(b) || "用户" + fallbackId;
 			persons.push({
 				id: fallbackId,
 				name: tag,
-				color: PERSON_COLORS[(i + 1) % PERSON_COLORS.length]
-			})
-		})
+				color: PERSON_COLORS[(i + 1) % PERSON_COLORS.length],
+			});
+		});
 	} catch (_) {
 		// 绑定加载失败，仅返回自己 + 共同
 	}
 
 	// 3. "共同"选项（固定 id = 'both'，日记 person 字段也存 'both'）
 	persons.push({
-		id: 'both',
-		name: '共同',
-		color: PERSON_COLORS[2]
-	})
+		id: "both",
+		name: "共同",
+		color: PERSON_COLORS[2],
+	});
 
-	return persons
+	return persons;
 }

@@ -1,21 +1,15 @@
-<script>
-	import { checkAuth } from '@/store/auth.js'
+<script setup>
+import { onLaunch } from '@dcloudio/uni-app'
+import { checkAuth } from '@/store/auth.js'
 
-	export default {
-		onLaunch: function() {
-			console.log('App Launch')
-			// 检查登录态，未登录则跳转登录页
-			if (!checkAuth()) {
-				uni.reLaunch({ url: '/pages/login/index' })
-			}
-		},
-		onShow: function() {
-			console.log('App Show')
-		},
-		onHide: function() {
-			console.log('App Hide')
-		}
-	}
+// App.vue 改成 setup 结构后，应用级生命周期要改用 uni-app 提供的组合式 API，
+// 这样可以保持启动、显示、隐藏时机和原来完全一致。
+onLaunch(() => {
+        // 检查登录态，未登录则跳转登录页
+        if (!checkAuth()) {
+                uni.reLaunch({ url: '/pages/login/index' })
+        }
+})
 </script>
 
 <style lang="scss">

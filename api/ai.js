@@ -13,23 +13,23 @@
  * 4. 调用 createDiary 完成添加
  */
 
-import { post } from './request.js'
-import { EVENT_TYPES } from '@/store/calendar.js'
+import { post } from "./request.js";
+import { EVENT_TYPES } from "@/store/calendar.js";
 
-let recognitionManager = null
+let recognitionManager = null;
 
 /** 事件类型中文名列表，供后端构造提示词 */
-const EVENT_NAMES = EVENT_TYPES.map(t => t.name)
+const EVENT_NAMES = EVENT_TYPES.map((t) => t.name);
 
 /** 获取微信同声传译语音识别管理器（仅微信小程序可用） */
 export function getSpeechRecognitionManager() {
 	// #ifdef MP-WEIXIN
 	if (!recognitionManager) {
-		const plugin = requirePlugin('WechatSI')
-		recognitionManager = plugin.getRecordRecognitionManager()
+		const plugin = requirePlugin("WechatSI");
+		recognitionManager = plugin.getRecordRecognitionManager();
 	}
 	// #endif
-	return recognitionManager
+	return recognitionManager;
 }
 
 /**
@@ -40,12 +40,12 @@ export function getSpeechRecognitionManager() {
  * @returns {Promise<{date: string, person: string, event: string, event_remark: string, attachments: array}>}
  */
 export function parseDiaryByText(text, myIdentity, persons) {
-	return post('/ai/diary/parse', {
+	return post("/ai/diary/parse", {
 		text,
 		event_names: EVENT_NAMES,
-		my_identity: myIdentity || '',
-		persons: (persons || []).map(p => p.name)
-	})
+		my_identity: myIdentity || "",
+		persons: (persons || []).map((p) => p.name),
+	});
 }
 
 /**
@@ -54,16 +54,16 @@ export function parseDiaryByText(text, myIdentity, persons) {
  * @returns {Promise<string[]>} 示例字符串数组
  */
 export function generateTipsByMonthData(monthData) {
-	return post('/ai/diary/tips', {
+	return post("/ai/diary/tips", {
 		month_data: monthData || {},
-		event_names: EVENT_NAMES
-	}).then(data => {
+		event_names: EVENT_NAMES,
+	}).then((data) => {
 		if (Array.isArray(data)) {
-			return data.slice(0, 4)
+			return data.slice(0, 4);
 		}
 		if (data && Array.isArray(data.tips)) {
-			return data.tips.slice(0, 4)
+			return data.tips.slice(0, 4);
 		}
-		throw new Error('AI 返回格式异常')
-	})
+		throw new Error("AI 返回格式异常");
+	});
 }

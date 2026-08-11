@@ -1,11 +1,20 @@
 <template>
-	<view class="ai-mask" :class="{ 'ai-mask--dark': isDark }" v-if="visible" @tap="onMaskTap">
+	<view
+		class="ai-mask"
+		:class="{ 'ai-mask--dark': isDark }"
+		v-if="visible"
+		@tap="onMaskTap"
+	>
 		<view class="ai-sheet" @tap.stop>
 			<!-- 头部 -->
 			<view class="ai-head">
 				<text class="ai-title">AI 智能添加</text>
 				<view class="ai-close" @tap="onClose">
-					<app-icon name="close" :size="32" :color="isDark ? '#8e8e93' : '#999'" />
+					<app-icon
+						name="close"
+						:size="32"
+						:color="isDark ? '#8e8e93' : '#999'"
+					/>
 				</view>
 			</view>
 
@@ -26,27 +35,36 @@
 				<text class="ai-counter">{{ inputValue.length }}/200</text>
 			</view>
 
-		<!-- 示例 -->
-		<view class="ai-tips">
-			<text class="ai-tips-label">试试这样说：</text>
-			<view v-if="tipsLoading" class="ai-chips">
-				<text class="ai-chip ai-chip--loading" :class="{ 'ai-chip--dark': isDark }">AI 生成中...</text>
+			<!-- 示例 -->
+			<view class="ai-tips">
+				<text class="ai-tips-label">试试这样说：</text>
+				<view v-if="tipsLoading" class="ai-chips">
+					<text
+						class="ai-chip ai-chip--loading"
+						:class="{ 'ai-chip--dark': isDark }"
+						>AI 生成中...</text
+					>
+				</view>
+				<view v-else class="ai-chips">
+					<text
+						v-for="(tip, idx) in tips"
+						:key="idx"
+						class="ai-chip"
+						:class="{ 'ai-chip--dark': isDark }"
+						@tap="useTip(tip)"
+						>{{ tip }}</text
+					>
+				</view>
 			</view>
-			<view v-else class="ai-chips">
-				<text
-					v-for="(tip, idx) in tips"
-					:key="idx"
-					class="ai-chip"
-					:class="{ 'ai-chip--dark': isDark }"
-					@tap="useTip(tip)"
-				>{{ tip }}</text>
-			</view>
-		</view>
 
 			<!-- 底部按钮 -->
 			<view class="ai-foot">
 				<text class="ai-btn ai-btn--cancel" @tap="onClose">取消</text>
-				<text class="ai-btn ai-btn--confirm" :class="{ disabled: !inputValue.trim() }" @tap="onConfirm">
+				<text
+					class="ai-btn ai-btn--confirm"
+					:class="{ disabled: !inputValue.trim() }"
+					@tap="onConfirm"
+				>
 					<app-icon name="send" :size="24" color="#fff" />
 					<text>发送</text>
 				</text>
@@ -55,133 +73,129 @@
 	</view>
 </template>
 
-<script>
-import { ref, watch, computed } from 'vue'
-import { getTheme } from '@/store/theme.js'
-import { generateTipsByMonthData } from '@/api/ai.js'
-import AppIcon from '@/components/app-icon/index.vue'
+<script setup>
+import { ref, watch, computed } from "vue";
+import { getTheme } from "@/store/theme.js";
+import { generateTipsByMonthData } from "@/api/ai.js";
+import AppIcon from "@/components/app-icon/index.vue";
 
 /** 兼容 monthData 传 ref 或普通对象的情况 */
 function unwrapMonthData(md) {
-	if (md && typeof md === 'object' && md.__v_isRef) return md.value
-	return md
+	if (md && typeof md === "object" && md.__v_isRef) return md.value;
+	return md;
 }
 
-const TIPS_CACHE_KEY = 'ai_tips_cache'
+const TIPS_CACHE_KEY = "ai_tips_cache";
 
 function todayKey() {
-	const t = new Date()
-	return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`
+	const t = new Date();
+	return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
 }
 
 function monthKey() {
-	const t = new Date()
-	return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}`
+	const t = new Date();
+	return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}`;
 }
 
 function getCache() {
 	try {
-		const raw = uni.getStorageSync(TIPS_CACHE_KEY)
-		return raw ? JSON.parse(raw) : null
+		const raw = uni.getStorageSync(TIPS_CACHE_KEY);
+		return raw ? JSON.parse(raw) : null;
 	} catch (_) {
-		return null
+		return null;
 	}
 }
 
 function setCache(tips) {
 	try {
-		uni.setStorageSync(TIPS_CACHE_KEY, JSON.stringify({ generatedAt: todayKey(), month: monthKey(), tips }))
-	} catch (_) { /* ignore */ }
+		uni.setStorageSync(
+			TIPS_CACHE_KEY,
+			JSON.stringify({
+				generatedAt: todayKey(),
+				month: monthKey(),
+				tips,
+			}),
+		);
+	} catch (_) {
+		/* ignore */
+	}
 }
 
-export default {
-	name: 'AiInputModal',
-	components: { AppIcon },
-	props: {
-		visible: { type: Boolean, default: false },
-		placeholder: { type: String, default: '例如：明天老公喝水 500ml' },
-		monthData: { type: Object, default: () => ({}) }
-	},
-	emits: ['close', 'confirm'],
-	setup(props, { emit }) {
-		const isDark = ref(getTheme() === 'dark')
-		const inputValue = ref('')
-		const tips = ref([
-			'明天老公喝水 500ml',
-			'今晚老婆运动 30 分钟',
-			'后天一起吃纪念日蛋糕',
-			'今天体重 62.5kg'
-		])
-		const tipsLoading = ref(false)
+const props = defineProps({
+	visible: { type: Boolean, default: false },
+	placeholder: { type: String, default: "例如：明天老公喝水 500ml" },
+	monthData: { type: Object, default: () => ({}) },
+});
 
-		const resolvedMonthData = computed(() => unwrapMonthData(props.monthData))
+const emit = defineEmits(["close", "confirm"]);
 
-		async function loadTips() {
-			const cache = getCache()
-			const md = resolvedMonthData.value
-			console.log('[AI Tips] loadTips 触发，cache:', cache, 'monthData keys:', Object.keys(md || {}))
-			if (cache && cache.generatedAt === todayKey() && cache.month === monthKey() && Array.isArray(cache.tips) && cache.tips.length > 0) {
-				console.log('[AI Tips] 命中缓存，直接使用')
-				tips.value = cache.tips.slice(0, 4)
-				return
-			}
+const isDark = ref(getTheme() === "dark");
+const inputValue = ref("");
+const tips = ref([
+	"明天老公喝水 500ml",
+	"今晚老婆运动 30 分钟",
+	"后天一起吃纪念日蛋糕",
+	"今天体重 62.5kg",
+]);
+const tipsLoading = ref(false);
 
-			tipsLoading.value = true
-		try {
-			console.log('[AI Tips] 未命中缓存，开始调用后端')
-			const data = await generateTipsByMonthData(md)
-			console.log('[AI Tips] 后端返回:', data)
-				tips.value = data
-				setCache(data)
-			} catch (e) {
-				console.error('[AI Tips] 生成失败:', e)
-				// 失败时保留兜底示例
-			} finally {
-				tipsLoading.value = false
-			}
-		}
+const resolvedMonthData = computed(() => unwrapMonthData(props.monthData));
 
-		watch(() => props.monthData, (val) => {
-			console.log('[AI Tips] props.monthData 变化，isRef:', !!(val && val.__v_isRef), 'keys:', Object.keys(unwrapMonthData(val) || {}))
-		}, { deep: true, immediate: true })
-
-		watch(() => props.visible, (v) => {
-			isDark.value = getTheme() === 'dark'
-			if (v) {
-				inputValue.value = ''
-				loadTips()
-			}
-		})
-
-		function onClose() {
-			emit('close')
-		}
-
-		function onMaskTap() {
-			emit('close')
-		}
-
-		function onConfirm() {
-			const text = inputValue.value.trim()
-			if (!text) return
-			emit('confirm', text)
-		}
-
-		function useTip(tip) {
-			inputValue.value = tip
-		}
-
-		return {
-			isDark,
-			inputValue,
-			tips,
-			tipsLoading,
-			onClose,
-			onMaskTap,
-			onConfirm,
-			useTip
-		}
+// tips 的生成依赖传入月份数据和本地缓存，
+// 迁移到 script setup 后保留原有加载时机，避免打开弹窗时行为变化。
+async function loadTips() {
+	const cache = getCache();
+	const md = resolvedMonthData.value;
+	if (
+		cache &&
+		cache.generatedAt === todayKey() &&
+		cache.month === monthKey() &&
+		Array.isArray(cache.tips) &&
+		cache.tips.length > 0
+	) {
+		tips.value = cache.tips.slice(0, 4);
+		return;
 	}
+
+	tipsLoading.value = true;
+	try {
+		const data = await generateTipsByMonthData(md);
+		tips.value = data;
+		setCache(data);
+	} catch (_) {
+		// 失败时保留兜底示例
+	} finally {
+		tipsLoading.value = false;
+	}
+}
+
+watch(
+	() => props.visible,
+	(visible) => {
+		isDark.value = getTheme() === "dark";
+		if (visible) {
+			inputValue.value = "";
+			loadTips();
+		}
+	},
+);
+
+function onClose() {
+	emit("close");
+}
+
+function onMaskTap() {
+	emit("close");
+}
+
+function onConfirm() {
+	const text = inputValue.value.trim();
+	if (!text) return;
+	emit("confirm", text);
+}
+
+function useTip(tip) {
+	inputValue.value = tip;
 }
 </script>
 

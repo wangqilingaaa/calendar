@@ -15,7 +15,8 @@
 				class="period-chip"
 				:class="{ active: period === p.id }"
 				@tap="period = p.id"
-			>{{ p.label }}</view>
+				>{{ p.label }}</view
+			>
 		</view>
 
 		<!-- ====== 概览卡片 ====== -->
@@ -43,7 +44,10 @@
 			<!-- 人物头部 -->
 			<view class="pc-head">
 				<view class="pc-head-left">
-					<view class="pc-dot" :style="{ backgroundColor: person.color }"></view>
+					<view
+						class="pc-dot"
+						:style="{ backgroundColor: person.color }"
+					></view>
 					<text class="pc-name">{{ person.name }}</text>
 				</view>
 				<text class="pc-total">{{ person.total }} 次</text>
@@ -64,7 +68,14 @@
 						<view class="pct-bar-track">
 							<view
 								class="pct-bar-fill"
-								:style="{ width: barPercent(person.maxTypeTotal, t.total) + '%', backgroundColor: t.color }"
+								:style="{
+									width:
+										barPercent(
+											person.maxTypeTotal,
+											t.total,
+										) + '%',
+									backgroundColor: t.color,
+								}"
 							></view>
 						</view>
 						<text class="pct-count">{{ t.total }}</text>
@@ -81,134 +92,139 @@
 	</view>
 </template>
 
-<script>
-import { ref, computed } from 'vue'
-import { getDateRangeEvents, aggregateByPersonThenType, PERSONS, dateKey } from '@/store/calendar.js'
-import { loadPersons } from '@/store/persons.js'
-import { getTheme } from '@/store/theme.js'
-import AppIcon from '@/components/app-icon/index.vue'
+<script setup>
+import { ref, computed } from "vue";
+import {
+	getDateRangeEvents,
+	aggregateByPersonThenType,
+	PERSONS,
+	dateKey,
+} from "@/store/calendar.js";
+import { loadPersons } from "@/store/persons.js";
+import { getTheme } from "@/store/theme.js";
+import AppIcon from "@/components/app-icon/index.vue";
 
-export default {
-	components: { AppIcon },
-	setup() {
-		const isDark = ref(getTheme() === 'dark')
+const isDark = ref(getTheme() === "dark");
 
-		/* ---- 状态栏 & 胶囊按钮适配（微信 / APK 兼容） ---- */
-		const headStyle = computed(() => {
-			const sys = uni.getSystemInfoSync()
-			const statusBarHeight = sys.statusBarHeight || 0
-			try {
-				// #ifdef MP-WEIXIN
-				const menu = uni.getMenuButtonBoundingClientRect()
-				if (menu && menu.bottom) {
-					const navHeight = menu.bottom + 8
-					const padRight = sys.windowWidth - menu.left + 12
-					return {
-						paddingTop: statusBarHeight + 'px',
-						height: (navHeight - statusBarHeight) + 'px',
-						lineHeight: menu.height + 'px',
-						paddingLeft: '20px',
-						paddingRight: padRight + 'px'
-					}
-				}
-				// #endif
-				// APK / H5 回退
-				return {
-					paddingTop: statusBarHeight + 'px',
-					height: '44px',
-					lineHeight: '44px',
-					paddingLeft: '20px',
-					paddingRight: '20px'
-				}
-			} catch (e) {
-				return {
-					paddingTop: statusBarHeight + 'px',
-					height: '44px',
-					lineHeight: '44px',
-					paddingLeft: '20px',
-					paddingRight: '20px'
-				}
-			}
-		})
-
-		const periods = [
-			{ id: 'week', label: '本周' },
-			{ id: 'month', label: '本月' }
-		]
-		const period = ref('week')
-
-		const stats = ref({ week: [], month: [] })
-		const activeDays = ref(0)
-
-		/* ---- 动态人物列表 ---- */
-		const persons = ref(PERSONS)
-
-		async function loadStats() {
-			const now = new Date()
-
-			// 本周
-			const dow = now.getDay() === 0 ? 7 : now.getDay()
-			const monday = new Date(now); monday.setDate(now.getDate() - dow + 1)
-			const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6)
-			const weekEvents = await getDateRangeEvents(
-				dateKey(monday.getFullYear(), monday.getMonth(), monday.getDate()),
-				dateKey(sunday.getFullYear(), sunday.getMonth(), sunday.getDate())
-			)
-
-			// 本月
-			const monthEvents = await getDateRangeEvents(
-				dateKey(now.getFullYear(), now.getMonth(), 1),
-				dateKey(now.getFullYear(), now.getMonth(), new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate())
-			)
-
-			stats.value = {
-				week: aggregateByPersonThenType(weekEvents, persons.value),
-				month: aggregateByPersonThenType(monthEvents, persons.value)
-			}
-			activeDays.value = new Set(weekEvents.map(e => e.date || '')).size
+/* ---- 状态栏 & 胶囊按钮适配（微信 / APK 兼容） ---- */
+const headStyle = computed(() => {
+	const sys = uni.getSystemInfoSync();
+	const statusBarHeight = sys.statusBarHeight || 0;
+	try {
+		// #ifdef MP-WEIXIN
+		const menu = uni.getMenuButtonBoundingClientRect();
+		if (menu && menu.bottom) {
+			const navHeight = menu.bottom + 8;
+			const padRight = sys.windowWidth - menu.left + 12;
+			return {
+				paddingTop: statusBarHeight + "px",
+				height: navHeight - statusBarHeight + "px",
+				lineHeight: menu.height + "px",
+				paddingLeft: "20px",
+				paddingRight: padRight + "px",
+			};
 		}
-
-		// 先加载动态人物，再加载统计
-		;(async () => {
-			persons.value = await loadPersons()
-			await loadStats()
-		})()
-
-		const personStats = computed(() => {
-			const list = stats.value[period.value]
-			// 为每个人物计算 maxTypeTotal，用于进度条百分比
-			return list.map(p => ({
-				...p,
-				maxTypeTotal: Math.max(1, ...p.types.map(t => t.total))
-			}))
-		})
-
-		const totalEvents = computed(() =>
-			personStats.value.reduce((s, p) => s + p.total, 0)
-		)
-
-		const uniqueTypes = computed(() => {
-			const set = new Set()
-			personStats.value.forEach(p => p.types.forEach(t => set.add(t.id)))
-			return set.size
-		})
-
-		const activeDaysNow = computed(() => activeDays.value)
-
-		function barPercent(max, val) {
-			return Math.round((val / max) * 100)
-		}
-
-		function goBack() {
-			uni.navigateBack()
-		}
-
+		// #endif
+		// APK / H5 回退
 		return {
-			isDark, periods, period,
-			personStats, totalEvents, uniqueTypes, activeDays: activeDaysNow,
-			barPercent, goBack, headStyle
-		}
+			paddingTop: statusBarHeight + "px",
+			height: "44px",
+			lineHeight: "44px",
+			paddingLeft: "20px",
+			paddingRight: "20px",
+		};
+	} catch (e) {
+		return {
+			paddingTop: statusBarHeight + "px",
+			height: "44px",
+			lineHeight: "44px",
+			paddingLeft: "20px",
+			paddingRight: "20px",
+		};
 	}
+});
+
+const periods = [
+	{ id: "week", label: "本周" },
+	{ id: "month", label: "本月" },
+];
+const period = ref("week");
+
+const stats = ref({ week: [], month: [] });
+const activeDaysCount = ref(0);
+
+/* ---- 动态人物列表 ---- */
+const persons = ref(PERSONS);
+
+async function loadStats() {
+	const now = new Date();
+
+	// 本周
+	const dow = now.getDay() === 0 ? 7 : now.getDay();
+	const monday = new Date(now);
+	monday.setDate(now.getDate() - dow + 1);
+	const sunday = new Date(monday);
+	sunday.setDate(monday.getDate() + 6);
+	const weekEvents = await getDateRangeEvents(
+		dateKey(monday.getFullYear(), monday.getMonth(), monday.getDate()),
+		dateKey(sunday.getFullYear(), sunday.getMonth(), sunday.getDate()),
+	);
+
+	// 本月
+	const monthEvents = await getDateRangeEvents(
+		dateKey(now.getFullYear(), now.getMonth(), 1),
+		dateKey(
+			now.getFullYear(),
+			now.getMonth(),
+			new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(),
+		),
+	);
+
+	stats.value = {
+		week: aggregateByPersonThenType(weekEvents, persons.value),
+		month: aggregateByPersonThenType(monthEvents, persons.value),
+	};
+	activeDaysCount.value = new Set(
+		weekEvents.map((event) => event.date || ""),
+	).size;
+}
+
+// 这里保留初始化时先拉人物、再拉统计的顺序，
+// 是为了保证统计分组使用的是最新人物列表，而不是旧的兜底常量。
+(async () => {
+	persons.value = await loadPersons();
+	await loadStats();
+})();
+
+const personStats = computed(() => {
+	const list = stats.value[period.value];
+	// 为每个人物计算 maxTypeTotal，用于进度条百分比
+	return list.map((person) => ({
+		...person,
+		maxTypeTotal: Math.max(1, ...person.types.map((type) => type.total)),
+	}));
+});
+
+const totalEvents = computed(() =>
+	personStats.value.reduce((sum, person) => sum + person.total, 0),
+);
+
+const uniqueTypes = computed(() => {
+	const set = new Set();
+	personStats.value.forEach((person) =>
+		person.types.forEach((type) => set.add(type.id)),
+	);
+	return set.size;
+});
+
+const activeDays = computed(() => activeDaysCount.value);
+
+function barPercent(max, val) {
+	return Math.round((val / max) * 100);
+}
+
+function goBack() {
+	uni.navigateBack();
 }
 </script>
 
@@ -219,7 +235,9 @@ export default {
 	min-height: 100vh;
 	padding-bottom: 60rpx;
 }
-.stats-dark { background: #1c1c1e; }
+.stats-dark {
+	background: #1c1c1e;
+}
 
 /* ====== 头部 ====== */
 .stats-head {
@@ -233,14 +251,20 @@ export default {
 	color: #1a1a1a;
 	width: 60rpx;
 }
-.stats-dark .head-back { color: #e5e5e7; }
+.stats-dark .head-back {
+	color: #e5e5e7;
+}
 .head-title {
 	font-size: 34rpx;
 	font-weight: 700;
 	color: #1a1a1a;
 }
-.stats-dark .head-title { color: #e5e5e7; }
-.head-spacer { width: 60rpx; }
+.stats-dark .head-title {
+	color: #e5e5e7;
+}
+.head-spacer {
+	width: 60rpx;
+}
 
 /* ====== 周期切换 ====== */
 .period-row {
@@ -256,14 +280,20 @@ export default {
 	margin-right: 12rpx;
 	font-weight: 500;
 }
-.stats-dark .period-chip { color: #8e8e93; background: #2c2c2e; }
+.stats-dark .period-chip {
+	color: #8e8e93;
+	background: #2c2c2e;
+}
 .period-chip.active {
 	background: #1a1a1a;
 	color: #fff;
 	font-weight: 600;
-	box-shadow: 0 4rpx 12rpx rgba(0,0,0,.1);
+	box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
 }
-.stats-dark .period-chip.active { background: #e5e5e7; color: #1c1c1e; }
+.stats-dark .period-chip.active {
+	background: #e5e5e7;
+	color: #1c1c1e;
+}
 
 /* ====== 概览卡片 ====== */
 .card {
@@ -272,28 +302,36 @@ export default {
 	background: #f8f8f8;
 	border-radius: 20rpx;
 }
-.stats-dark .card { background: #2c2c2e; }
+.stats-dark .card {
+	background: #2c2c2e;
+}
 
 .overview-card {
 	display: flex;
 	justify-content: space-around;
 	padding: 24rpx 28rpx;
 }
-.ov-item { text-align: center; }
+.ov-item {
+	text-align: center;
+}
 .ov-num {
 	display: block;
 	font-size: 44rpx;
 	font-weight: 700;
 	color: #1a1a1a;
 }
-.stats-dark .ov-num { color: #e5e5e7; }
+.stats-dark .ov-num {
+	color: #e5e5e7;
+}
 .ov-label {
 	display: block;
 	font-size: 22rpx;
 	color: #999;
 	margin-top: 4rpx;
 }
-.stats-dark .ov-label { color: #8e8e93; }
+.stats-dark .ov-label {
+	color: #8e8e93;
+}
 
 /* ====== 人物卡片 ====== */
 .person-card {
@@ -302,7 +340,9 @@ export default {
 	background: #f8f8f8;
 	border-radius: 20rpx;
 }
-.stats-dark .person-card { background: #2c2c2e; }
+.stats-dark .person-card {
+	background: #2c2c2e;
+}
 
 .pc-head {
 	display: flex;
@@ -312,7 +352,9 @@ export default {
 	padding-bottom: 20rpx;
 	border-bottom: 1rpx solid #eee;
 }
-.stats-dark .pc-head { border-bottom-color: #38383a; }
+.stats-dark .pc-head {
+	border-bottom-color: #38383a;
+}
 
 .pc-head-left {
 	display: flex;
@@ -329,14 +371,18 @@ export default {
 	font-weight: 700;
 	color: #1a1a1a;
 }
-.stats-dark .pc-name { color: #e5e5e7; }
+.stats-dark .pc-name {
+	color: #e5e5e7;
+}
 
 .pc-total {
 	font-size: 26rpx;
 	font-weight: 600;
 	color: #999;
 }
-.stats-dark .pc-total { color: #8e8e93; }
+.stats-dark .pc-total {
+	color: #8e8e93;
+}
 
 /* ====== 类别列表 ====== */
 .pc-types {
@@ -349,7 +395,9 @@ export default {
 	justify-content: space-between;
 	margin-bottom: 14rpx;
 }
-.pc-type-item:last-child { margin-bottom: 0; }
+.pc-type-item:last-child {
+	margin-bottom: 0;
+}
 
 .pct-left {
 	display: flex;
@@ -362,7 +410,9 @@ export default {
 	color: #1a1a1a;
 	margin-left: 12rpx;
 }
-.stats-dark .pct-name { color: #e5e5e7; }
+.stats-dark .pct-name {
+	color: #e5e5e7;
+}
 
 .pct-right {
 	flex: 1;
@@ -377,7 +427,9 @@ export default {
 	border-radius: 5rpx;
 	overflow: hidden;
 }
-.stats-dark .pct-bar-track { background: #3a3a3c; }
+.stats-dark .pct-bar-track {
+	background: #3a3a3c;
+}
 
 .pct-bar-fill {
 	height: 100%;
@@ -393,7 +445,9 @@ export default {
 	text-align: right;
 	flex-shrink: 0;
 }
-.stats-dark .pct-count { color: #e5e5e7; }
+.stats-dark .pct-count {
+	color: #e5e5e7;
+}
 
 /* ====== 空态 ====== */
 .empty-text {
@@ -403,7 +457,9 @@ export default {
 	display: block;
 	text-align: center;
 }
-.stats-dark .empty-text { color: #8e8e93; }
+.stats-dark .empty-text {
+	color: #8e8e93;
+}
 
 .empty-card {
 	margin: 0 24rpx 20rpx;
@@ -411,5 +467,7 @@ export default {
 	background: #f8f8f8;
 	border-radius: 20rpx;
 }
-.stats-dark .empty-card { background: #2c2c2e; }
+.stats-dark .empty-card {
+	background: #2c2c2e;
+}
 </style>

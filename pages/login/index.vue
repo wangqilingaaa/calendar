@@ -3,7 +3,9 @@
 		<view class="login-card">
 			<!-- 标题 -->
 			<view class="login-header">
-				<text class="login-title">{{ isRegister ? '注册' : '登录' }}</text>
+				<text class="login-title">{{
+					isRegister ? "注册" : "登录"
+				}}</text>
 				<text class="login-sub">日历日记 · 记录每一天</text>
 			</view>
 
@@ -51,113 +53,107 @@
 							class="gender-tag"
 							:class="{ 'gender-tag--active': gender === '男' }"
 							@tap="toggleGender('男')"
-						>男</text>
+							>男</text
+						>
 						<text
 							class="gender-tag"
 							:class="{ 'gender-tag--active': gender === '女' }"
 							@tap="toggleGender('女')"
-						>女</text>
+							>女</text
+						>
 					</view>
 				</view>
 				<view class="submit-btn" @tap="handleSubmit">
-					<text>{{ isRegister ? '注册' : '登录' }}</text>
+					<text>{{ isRegister ? "注册" : "登录" }}</text>
 				</view>
 			</view>
 
 			<!-- 切换 -->
 			<view class="switch-row">
 				<text class="switch-link" @tap="isRegister = !isRegister">
-					{{ isRegister ? '已有账号？去登录' : '没有账号？去注册' }}
+					{{ isRegister ? "已有账号？去登录" : "没有账号？去注册" }}
 				</text>
 			</view>
 		</view>
 	</view>
 </template>
 
-<script>
-import { ref } from 'vue'
-import { login, register, wechatLogin } from '@/api/auth.js'
-import { setAuth, checkAuth } from '@/store/auth.js'
-import { getTheme } from '@/store/theme.js'
+<script setup>
+import { ref } from "vue";
+import { onLoad } from "@dcloudio/uni-app";
+import { login, register, wechatLogin } from "@/api/auth.js";
+import { setAuth, checkAuth } from "@/store/auth.js";
+import { getTheme } from "@/store/theme.js";
 
-export default {
-	onLoad() {
-		// 已登录则直接进入主页
-		if (checkAuth()) {
-			uni.reLaunch({ url: '/pages/index/index' })
-		}
-	},
-	setup() {
-		const isDark = ref(getTheme() === 'dark')
-		const isRegister = ref(false)
-		const username = ref('')
-		const password = ref('')
-		const identityTag = ref('')
-		const gender = ref('')
+const isDark = ref(getTheme() === "dark");
+const isRegister = ref(false);
+const username = ref("");
+const password = ref("");
+const identityTag = ref("");
+const gender = ref("");
 
-		function toggleGender(val) {
-			gender.value = gender.value === val ? '' : val
-		}
+// 页面进入时先检查登录态，setup 化后改用 uni-app 的组合式生命周期，
+// 这样既符合 <script setup> 结构，也不会改变原来的跳转时机。
+onLoad(() => {
+	if (checkAuth()) {
+		uni.reLaunch({ url: "/pages/index/index" });
+	}
+});
 
-		async function handleSubmit() {
-			if (!username.value.trim()) {
-				uni.showToast({ title: '请输入用户名', icon: 'none' })
-				return
-			}
-			if (!password.value) {
-				uni.showToast({ title: '请输入密码', icon: 'none' })
-				return
-			}
+function toggleGender(val) {
+	gender.value = gender.value === val ? "" : val;
+}
 
-			try {
-				let data
-				if (isRegister.value) {
-					data = await register(
-						username.value.trim(),
-						password.value,
-						identityTag.value.trim(),
-						gender.value
-					)
-					if (!data || !data.id) throw new Error('注册失败')
-					// 注册成功后自动登录
-					data = await login(username.value.trim(), password.value)
-				} else {
-					data = await login(username.value.trim(), password.value)
-				}
+async function handleSubmit() {
+	if (!username.value.trim()) {
+		uni.showToast({ title: "请输入用户名", icon: "none" });
+		return;
+	}
+	if (!password.value) {
+		uni.showToast({ title: "请输入密码", icon: "none" });
+		return;
+	}
 
-				if (data && data.token) {
-					setAuth(data.token, data)
-					uni.showToast({ title: '登录成功', icon: 'success' })
-					setTimeout(() => {
-						uni.reLaunch({ url: '/pages/index/index' })
-					}, 500)
-				}
-			} catch (e) {
-				// 错误已在 request 层提示
-			}
+	try {
+		let data;
+		if (isRegister.value) {
+			data = await register(
+				username.value.trim(),
+				password.value,
+				identityTag.value.trim(),
+				gender.value,
+			);
+			if (!data || !data.id) throw new Error("注册失败");
+			// 注册成功后自动登录，保持用户只操作一次的体验。
+			data = await login(username.value.trim(), password.value);
+		} else {
+			data = await login(username.value.trim(), password.value);
 		}
 
-		async function handleWechatLogin() {
-			try {
-				const data = await wechatLogin()
-				if (data && data.token) {
-					setAuth(data.token, data)
-					uni.showToast({ title: '登录成功', icon: 'success' })
-					setTimeout(() => {
-						uni.reLaunch({ url: '/pages/index/index' })
-					}, 500)
-				}
-			} catch (e) {
-				// 错误已在 request 层提示
-			}
+		if (data && data.token) {
+			setAuth(data.token, data);
+			uni.showToast({ title: "登录成功", icon: "success" });
+			setTimeout(() => {
+				uni.reLaunch({ url: "/pages/index/index" });
+			}, 500);
 		}
+	} catch (e) {
+		// 错误已在 request 层提示
+	}
+}
 
-		return {
-			isDark, isRegister,
-			username, password,
-			identityTag, gender, toggleGender,
-			handleSubmit, handleWechatLogin
+async function handleWechatLogin() {
+	try {
+		const data = await wechatLogin();
+		if (data && data.token) {
+			setAuth(data.token, data);
+			uni.showToast({ title: "登录成功", icon: "success" });
+			setTimeout(() => {
+				uni.reLaunch({ url: "/pages/index/index" });
+			}, 500);
 		}
+	} catch (e) {
+		// 错误已在 request 层提示
 	}
 }
 </script>
@@ -171,7 +167,9 @@ export default {
 	justify-content: center;
 	padding: 40rpx;
 }
-.login-dark { background: #1c1c1e; }
+.login-dark {
+	background: #1c1c1e;
+}
 
 .login-card {
 	width: 100%;
@@ -188,14 +186,18 @@ export default {
 	color: #1a1a1a;
 	display: block;
 }
-.login-dark .login-title { color: #e5e5e7; }
+.login-dark .login-title {
+	color: #e5e5e7;
+}
 .login-sub {
 	font-size: 26rpx;
 	color: #999;
 	margin-top: 12rpx;
 	display: block;
 }
-.login-dark .login-sub { color: #8e8e93; }
+.login-dark .login-sub {
+	color: #8e8e93;
+}
 
 /* 微信按钮 */
 .wechat-btn {
@@ -208,9 +210,11 @@ export default {
 	font-size: 32rpx;
 	color: #fff;
 	font-weight: 600;
-	box-shadow: 0 8rpx 24rpx rgba(7,193,96,.25);
+	box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.25);
 }
-.wechat-btn:active { opacity: .85; }
+.wechat-btn:active {
+	opacity: 0.85;
+}
 .wechat-icon {
 	width: 48rpx;
 	height: 48rpx;
@@ -235,13 +239,17 @@ export default {
 	height: 1rpx;
 	background: #eee;
 }
-.login-dark .divider-line { background: #38383a; }
+.login-dark .divider-line {
+	background: #38383a;
+}
 .divider-text {
 	font-size: 22rpx;
 	color: #999;
 	padding: 0 24rpx;
 }
-.login-dark .divider-text { color: #8e8e93; }
+.login-dark .divider-text {
+	color: #8e8e93;
+}
 
 /* 表单 */
 .form {
@@ -280,7 +288,9 @@ export default {
 	font-weight: 600;
 	margin-top: 12rpx;
 }
-.submit-btn:active { opacity: .8; }
+.submit-btn:active {
+	opacity: 0.8;
+}
 .login-dark .submit-btn {
 	background: #e5e5e7;
 	color: #1c1c1e;
@@ -298,7 +308,9 @@ export default {
 	font-size: 26rpx;
 	color: #999;
 }
-.login-dark .gender-label { color: #8e8e93; }
+.login-dark .gender-label {
+	color: #8e8e93;
+}
 .gender-options {
 	display: flex;
 	gap: 16rpx;
@@ -331,5 +343,7 @@ export default {
 	font-size: 26rpx;
 	color: #007aff;
 }
-.login-dark .switch-link { color: #0a84ff; }
+.login-dark .switch-link {
+	color: #0a84ff;
+}
 </style>

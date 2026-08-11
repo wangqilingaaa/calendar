@@ -1,9 +1,16 @@
 <template>
-	<view class="modal-mask" :class="{ 'modal-dark': isDark }" v-if="visible" @tap="$emit('close')">
+	<view
+		class="modal-mask"
+		:class="{ 'modal-dark': isDark }"
+		v-if="visible"
+		@tap="$emit('close')"
+	>
 		<view class="modal-sheet" @tap.stop>
 			<!-- 标题：日期 + 餐次 -->
 			<view class="sheet-head">
-				<text class="head-date">{{ weekdayLabel }} · {{ mealName }}</text>
+				<text class="head-date"
+					>{{ weekdayLabel }} · {{ mealName }}</text
+				>
 				<text class="head-weekday">{{ dateText }}</text>
 			</view>
 
@@ -14,12 +21,25 @@
 					<text v-if="!dishes.length" class="muted">— 暂无</text>
 				</view>
 				<view v-if="dishes.length" class="dish-list">
-					<view v-for="(dish, i) in dishes" :key="i" class="dish-item">
+					<view
+						v-for="(dish, i) in dishes"
+						:key="i"
+						class="dish-item"
+					>
 						<view class="dish-left" @tap="onToggle(i)">
-							<view class="dish-check" :class="{ 'dish-check--done': dish.done }">
-								<text v-if="dish.done" class="dish-tick">✓</text>
+							<view
+								class="dish-check"
+								:class="{ 'dish-check--done': dish.done }"
+							>
+								<text v-if="dish.done" class="dish-tick"
+									>✓</text
+								>
 							</view>
-							<text class="dish-name" :class="{ 'dish-name--done': dish.done }">{{ dish.name }}</text>
+							<text
+								class="dish-name"
+								:class="{ 'dish-name--done': dish.done }"
+								>{{ dish.name }}</text
+							>
 						</view>
 						<text class="del-btn" @tap.stop="onRemove(i)">x</text>
 					</view>
@@ -30,57 +50,74 @@
 			<view class="block">
 				<view class="block-title">添加</view>
 				<view class="add-bar">
-					<input class="add-input" v-model="addInput" placeholder="输入菜名，如 番茄炒蛋"
-						confirm-type="done" @confirm="onAdd" />
+					<input
+						class="add-input"
+						v-model="addInput"
+						placeholder="输入菜名，如 番茄炒蛋"
+						confirm-type="done"
+						@confirm="onAdd"
+					/>
 					<text class="add-btn" @tap="onAdd">+</text>
 				</view>
 			</view>
 
 			<!-- 底部 -->
 			<view class="sheet-foot">
-				<text v-if="dishes.length" class="foot-link danger" @tap="$emit('clear')">清空全部</text>
+				<text
+					v-if="dishes.length"
+					class="foot-link danger"
+					@tap="$emit('clear')"
+					>清空全部</text
+				>
 				<text class="foot-link" @tap="$emit('close')">关闭</text>
 			</view>
 		</view>
 	</view>
 </template>
 
-<script>
-import { ref, watch } from 'vue'
-import { getTheme } from '@/store/theme.js'
+<script setup>
+import { ref, watch } from "vue";
+import { getTheme } from "@/store/theme.js";
 
-export default {
-	name: 'MealDetailModal',
-	props: {
-		visible: { type: Boolean, default: false },
-		weekdayLabel: { type: String, default: '' },
-		dateText: { type: String, default: '' },
-		mealName: { type: String, default: '' },
-		dishes: { type: Array, default: () => [] }
-	},
-	emits: ['close', 'toggle', 'remove', 'add', 'clear'],
-	setup(props, { emit }) {
-		const isDark = ref(getTheme() === 'dark')
-		const addInput = ref('')
+const props = defineProps({
+	visible: { type: Boolean, default: false },
+	weekdayLabel: { type: String, default: "" },
+	dateText: { type: String, default: "" },
+	mealName: { type: String, default: "" },
+	dishes: { type: Array, default: () => [] },
+});
 
-		watch(() => props.visible, (v) => {
-			if (v) {
-				isDark.value = getTheme() === 'dark'
-				addInput.value = ''
-			}
-		}, { immediate: true })
+const emit = defineEmits(["close", "toggle", "remove", "add", "clear"]);
 
-		function onToggle(i) { emit('toggle', i) }
-		function onRemove(i) { emit('remove', i) }
-		function onAdd() {
-			const name = addInput.value.trim()
-			if (!name) return
-			emit('add', name)
-			addInput.value = ''
+const isDark = ref(getTheme() === "dark");
+const addInput = ref("");
+
+// 每次弹窗打开时同步主题并清空输入框，
+// 这样 setup 化之后仍保持和原先 setup() 返回对象一致的行为。
+watch(
+	() => props.visible,
+	(visible) => {
+		if (visible) {
+			isDark.value = getTheme() === "dark";
+			addInput.value = "";
 		}
+	},
+	{ immediate: true },
+);
 
-		return { isDark, addInput, onToggle, onRemove, onAdd }
-	}
+function onToggle(index) {
+	emit("toggle", index);
+}
+
+function onRemove(index) {
+	emit("remove", index);
+}
+
+function onAdd() {
+	const name = addInput.value.trim();
+	if (!name) return;
+	emit("add", name);
+	addInput.value = "";
 }
 </script>
 
@@ -92,7 +129,7 @@ export default {
 	right: 0;
 	bottom: 0;
 	left: 0;
-	background: rgba(0, 0, 0, .4);
+	background: rgba(0, 0, 0, 0.4);
 	z-index: 999;
 	display: flex;
 	align-items: flex-end;
@@ -108,7 +145,7 @@ export default {
 	flex-direction: column;
 	padding-bottom: 40rpx;
 	overflow-y: auto;
-	box-shadow: 0 -8rpx 40rpx rgba(0, 0, 0, .06);
+	box-shadow: 0 -8rpx 40rpx rgba(0, 0, 0, 0.06);
 }
 
 .modal-dark .modal-sheet {
@@ -214,8 +251,8 @@ export default {
 }
 
 .dish-check--done {
-	background: #1D9E75;
-	border-color: #1D9E75;
+	background: #1d9e75;
+	border-color: #1d9e75;
 }
 
 .dish-tick {
@@ -294,7 +331,7 @@ export default {
 }
 
 .add-btn:active {
-	opacity: .7;
+	opacity: 0.7;
 }
 
 .modal-dark .add-btn {
