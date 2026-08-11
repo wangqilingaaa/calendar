@@ -1,5 +1,5 @@
 <template>
-	<view class="stats-page" :class="{ 'stats-dark': isDark }">
+	<view class="stats-page" :class="[pageThemeClass, { 'stats-dark': isDark }]">
 		<!-- 头部 -->
 		<view class="stats-head" :style="headStyle">
 			<text class="head-back" @tap="goBack">‹</text>
@@ -74,6 +74,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { onShow } from "@dcloudio/uni-app";
 import {
 	getDateRangeEvents,
 	aggregateByPersonThenType,
@@ -82,9 +83,17 @@ import {
 } from "@/store/calendar.js";
 import { loadPersons } from "@/store/persons.js";
 import { getTheme } from "@/store/theme.js";
+import { getCurrentProfileThemeClass } from "@/store/profile-theme.js";
 import AppIcon from "@/components/app-icon/index.vue";
 
 const isDark = ref(getTheme() === "dark");
+const pageThemeClass = ref(getCurrentProfileThemeClass());
+
+// 统计页从“我的”页面返回时，需要刷新根节点主题类，保证配色同步到最新资料。
+onShow(() => {
+	isDark.value = getTheme() === "dark";
+	pageThemeClass.value = getCurrentProfileThemeClass();
+});
 
 /* ---- 状态栏 & 胶囊按钮适配（微信 / APK 兼容） ---- */
 const headStyle = computed(() => {
@@ -211,13 +220,19 @@ function goBack() {
 <style lang="scss" scoped>
 /* ====== 根容器 ====== */
 .stats-page {
-	background: #fff;
+	background: linear-gradient(180deg,
+			var(--theme-page-top) 0%,
+			var(--theme-page-mid) 220rpx,
+			var(--theme-page-bottom) 100%);
 	min-height: 100vh;
 	padding-bottom: 60rpx;
 }
 
 .stats-dark {
-	background: #1c1c1e;
+	background: linear-gradient(180deg,
+			var(--theme-page-top-dark) 0%,
+			var(--theme-page-mid-dark) 220rpx,
+			var(--theme-page-bottom-dark) 100%);
 }
 
 /* ====== 头部 ====== */
@@ -274,15 +289,15 @@ function goBack() {
 }
 
 .period-chip.active {
-	background: #1a1a1a;
+	background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
 	color: #fff;
 	font-weight: 600;
-	box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+	box-shadow: 0 10rpx 20rpx var(--theme-ring);
 }
 
 .stats-dark .period-chip.active {
-	background: #e5e5e7;
-	color: #1c1c1e;
+	background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
+	color: #fff;
 }
 
 /* ====== 概览卡片 ====== */
@@ -301,6 +316,11 @@ function goBack() {
 	display: flex;
 	justify-content: space-around;
 	padding: 24rpx 28rpx;
+	background: linear-gradient(135deg, var(--theme-card-start) 0%, var(--theme-card-end) 100%);
+}
+
+.stats-dark .overview-card {
+	background: linear-gradient(135deg, var(--theme-card-start-dark) 0%, var(--theme-card-end-dark) 100%);
 }
 
 .ov-item {
@@ -311,11 +331,11 @@ function goBack() {
 	display: block;
 	font-size: 44rpx;
 	font-weight: 700;
-	color: #1a1a1a;
+	color: var(--theme-primary-strong);
 }
 
 .stats-dark .ov-num {
-	color: #e5e5e7;
+	color: var(--theme-primary);
 }
 
 .ov-label {

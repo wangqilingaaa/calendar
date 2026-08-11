@@ -271,7 +271,7 @@ function onAdd() {
 .add-input {
 	flex: 1;
 	height: 76rpx;
-	border: 1px solid #eee;
+	border: 1px solid var(--theme-ring);
 	border-radius: 40rpx;
 	padding: 0 28rpx;
 	font-size: 26rpx;
@@ -281,7 +281,7 @@ function onAdd() {
 
 .modal-dark .add-input {
 	background: #2c2c2e;
-	border-color: #48484a;
+	border-color: var(--theme-soft-bg-dark);
 	color: #e5e5e7;
 }
 
@@ -290,13 +290,14 @@ function onAdd() {
 	width: 80rpx;
 	height: 80rpx;
 	border-radius: 50%;
-	background: #1a1a1a;
+	background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
 	color: #fff;
 	font-size: 40rpx;
 	font-weight: 300;
 	line-height: 80rpx;
 	text-align: center;
 	margin-left: 14rpx;
+	box-shadow: 0 10rpx 20rpx var(--theme-ring);
 }
 
 .add-btn:active {
@@ -304,8 +305,8 @@ function onAdd() {
 }
 
 .modal-dark .add-btn {
-	background: #e5e5e7;
-	color: #1c1c1e;
+	background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
+	color: #fff;
 }
 
 /* ====== 底部 ====== */

@@ -1,5 +1,5 @@
 <template>
-	<view class="calendar-page" :class="{ 'theme-dark': isDark }">
+	<view class="calendar-page" :class="[pageThemeClass, { 'theme-dark': isDark }]">
 		<!-- ====== 顶部栏 ====== -->
 		<view class="top-bar" :style="navBarStyle">
 			<view class="top-left">
@@ -94,6 +94,7 @@
 
 <script setup>
 import { ref, computed, watch, provide, onMounted } from "vue";
+import { onShow } from "@dcloudio/uni-app";
 import {
 	getMonthData,
 	DATE_STATUSES,
@@ -101,15 +102,16 @@ import {
 	EVENT_TYPES,
 } from "@/store/calendar.js";
 import {
-        loadPersons,
-        findPersonById,
-        normalizePersonId,
-        toPersonPayload,
+	loadPersons,
+	findPersonById,
+	normalizePersonId,
+	toPersonPayload,
 } from "@/store/persons.js";
 import { getTheme, setTheme } from "@/store/theme.js";
 import { createDiary } from "@/api/diary.js";
 import { getSpeechRecognitionManager, parseDiaryByText } from "@/api/ai.js";
 import { getUser } from "@/store/auth.js";
+import { getCurrentProfileThemeClass } from "@/store/profile-theme.js";
 import AppIcon from "@/components/app-icon/index.vue";
 import DateDetailModal from "@/components/date-detail-modal/index.vue";
 import AiInputModal from "@/components/ai-input-modal/index.vue";
@@ -121,12 +123,19 @@ const weekdays = ["一", "二", "三", "四", "五", "六", "日"];
 
 /* ---- 主题 ---- */
 const isDark = ref(getTheme() === "dark");
+const pageThemeClass = ref(getCurrentProfileThemeClass());
 provide("isDark", isDark);
 
 function toggleTheme() {
 	isDark.value = !isDark.value;
 	setTheme(isDark.value ? "dark" : "light");
 }
+
+// 首页是主入口，从“我的”页面修改性别返回时需要同步刷新主题类和明暗模式。
+onShow(() => {
+	isDark.value = getTheme() === "dark";
+	pageThemeClass.value = getCurrentProfileThemeClass();
+});
 
 /* ---- 动态人物列表（当前用户 + 绑定用户的 identity_tag） ---- */
 const persons = ref(PERSONS); // 兜底：加载前用硬编码列表
@@ -259,13 +268,13 @@ async function processAiText(text) {
 
 // 将 AI 返回的人物标识解析为前端统一使用的数据库 person id
 function resolvePerson(raw) {
-        if (!raw) return "both";
-        const text = String(raw).trim();
+	if (!raw) return "both";
+	const text = String(raw).trim();
 	// 「我 / 自己 / me」统一映射到当前登录用户身份
 	if (text === "我" || text === "自己" || text.toLowerCase() === "me")
-                return myPersonId;
-        // 其余入口统一在边界层归一化为数据库 id，业务主链路只继续使用 id。
-        return normalizePersonId(text, persons.value);
+		return myPersonId;
+	// 其余入口统一在边界层归一化为数据库 id，业务主链路只继续使用 id。
+	return normalizePersonId(text, persons.value);
 }
 
 async function executeAiAdd(data, originalText) {
@@ -278,9 +287,9 @@ async function executeAiAdd(data, originalText) {
 		return;
 	}
 
-        // person：先统一归一化为前端数据库 id，再转换为接口提交值。
-        const personId = resolvePerson(data.person);
-        const person = toPersonPayload(personId, persons.value);
+	// person：先统一归一化为前端数据库 id，再转换为接口提交值。
+	const personId = resolvePerson(data.person);
+	const person = toPersonPayload(personId, persons.value);
 
 	// event 必须是已定义的事件类型中文名
 	const type = EVENT_TYPES.find((item) => item.name === data.event);
@@ -423,17 +432,17 @@ async function buildGrid() {
 
 		const personSet = new Set();
 		if (data) {
-                        data.events.forEach((event) => {
-                                const personId = normalizePersonId(
-                                        event.person || "both",
-                                        persons.value,
-                                );
-                                personSet.add(personId);
-                        });
+			data.events.forEach((event) => {
+				const personId = normalizePersonId(
+					event.person || "both",
+					persons.value,
+				);
+				personSet.add(personId);
+			});
 		}
 
 		const personDots = [...personSet].map((personId) => {
-                        const person = findPersonById(personId, persons.value);
+			const person = findPersonById(personId, persons.value);
 			return person ? { color: person.color } : { color: "#9B59B6" };
 		});
 
@@ -539,14 +548,20 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 <style lang="scss" scoped>
 /* ====== 根容器 ====== */
 .calendar-page {
-	background: #fff;
+	background: linear-gradient(180deg,
+			var(--theme-page-top) 0%,
+			var(--theme-page-mid) 220rpx,
+			var(--theme-page-bottom) 100%);
 	display: flex;
 	flex-direction: column;
 	height: 100vh;
 }
 
 .calendar-page.theme-dark {
-	background: #1c1c1e;
+	background: linear-gradient(180deg,
+			var(--theme-page-top-dark) 0%,
+			var(--theme-page-mid-dark) 220rpx,
+			var(--theme-page-bottom-dark) 100%);
 }
 
 /* ====== 顶部栏 ====== */
@@ -678,12 +693,12 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 }
 
 .date-cell--today {
-	background: rgba(0, 122, 255, 0.06);
+	background: var(--theme-soft-bg);
 	border-radius: 14rpx;
 }
 
 .theme-dark .date-cell--today {
-	background: rgba(10, 132, 255, 0.2);
+	background: var(--theme-soft-bg-dark);
 }
 
 .date-num {
@@ -698,12 +713,12 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 }
 
 .date-num--today {
-	color: #007aff;
+	color: var(--theme-primary-strong);
 	font-weight: 700;
 }
 
 .theme-dark .date-num--today {
-	color: #0a84ff;
+	color: var(--theme-primary);
 }
 
 /* 状态标记(底部小横条) */
@@ -779,11 +794,11 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	width: 104rpx;
 	height: 104rpx;
 	border-radius: 50%;
-	background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
+	background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-secondary) 100%);
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	box-shadow: 0 12rpx 32rpx rgba(0, 122, 255, 0.38);
+	box-shadow: 0 12rpx 32rpx var(--theme-ring);
 	z-index: 100;
 	transition:
 		transform 0.15s ease,
@@ -799,15 +814,15 @@ watch([currentYear, currentMonth, persons], buildGrid, { immediate: true });
 	left: -6rpx;
 	border-radius: 50%;
 	background: linear-gradient(135deg,
-			rgba(0, 122, 255, 0.35) 0%,
-			rgba(88, 86, 214, 0.25) 100%);
+			var(--theme-ring) 0%,
+			var(--theme-soft-bg-dark) 100%);
 	z-index: -1;
 	animation: ai-halo 2.4s ease-in-out infinite;
 }
 
 .ai-fab:active {
 	transform: scale(0.92);
-	box-shadow: 0 6rpx 18rpx rgba(0, 122, 255, 0.3);
+	box-shadow: 0 6rpx 18rpx var(--theme-ring);
 }
 
 .ai-fab--recording {

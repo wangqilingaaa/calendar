@@ -13,17 +13,17 @@
 					<view v-for="s in statuses" :key="s.id" class="status-dot" :class="{ active: currentStatus === s.id }"
 						@tap="changeStatus(s.id)">
 						<view class="dot-circle" :style="s.color !== 'transparent'
-								? {
-									backgroundColor:
-										currentStatus === s.id
-											? s.color
-											: 'transparent',
-									borderColor:
-										currentStatus === s.id
-											? s.color
-											: '#ddd',
-								}
-								: { borderColor: '#ddd' }
+							? {
+								backgroundColor:
+									currentStatus === s.id
+										? s.color
+										: 'transparent',
+								borderColor:
+									currentStatus === s.id
+										? s.color
+										: '#ddd',
+							}
+							: { borderColor: '#ddd' }
 							">
 						</view>
 						<text>{{ s.name }}</text>
@@ -82,17 +82,17 @@
 
 				<!-- 人物选择 -->
 				<view class="person-row">
-                                        <view v-for="p in persons" :key="p.id" class="person-chip" :class="{ active: addPerson === p.id }" :style="addPerson === p.id
-							? {
-								backgroundColor: p.color,
-								borderColor: p.color,
-								color: '#fff',
-							}
-							: {
-								color: p.color,
-								borderColor: p.color + '60',
-							}
-                                                " @tap="addPerson = p.id">
+					<view v-for="p in persons" :key="p.id" class="person-chip" :class="{ active: addPerson === p.id }" :style="addPerson === p.id
+						? {
+							backgroundColor: p.color,
+							borderColor: p.color,
+							color: '#fff',
+						}
+						: {
+							color: p.color,
+							borderColor: p.color + '60',
+						}
+						" @tap="addPerson = p.id">
 						<text>{{ p.name }}</text>
 					</view>
 				</view>
@@ -104,8 +104,8 @@
 							" @tap="addType = t.id">
 							<app-icon :name="t.id" :size="32" :color="addType === t.id ? t.color : '#999'" />
 							<text :style="addType === t.id
-									? { color: t.color }
-									: { color: '#999' }
+								? { color: t.color }
+								: { color: '#999' }
 								">{{ t.name }}</text>
 						</view>
 					</view>
@@ -141,9 +141,9 @@ import {
 	dateKey,
 } from "@/store/calendar.js";
 import {
-        findPersonById,
-        normalizePersonId,
-        toPersonPayload,
+	findPersonById,
+	normalizePersonId,
+	toPersonPayload,
 } from "@/store/persons.js";
 import { getTheme } from "@/store/theme.js";
 import { getUser } from "@/store/auth.js";
@@ -218,25 +218,25 @@ function updateEvents() {
 
 	sourceEvents.forEach((event) => {
 		const type = types.find((item) => item.id === event.type);
-                const personId = normalizePersonId(
-                        event.person || "both",
-                        persons.value,
-                );
+		const personId = normalizePersonId(
+			event.person || "both",
+			persons.value,
+		);
 		if (type && type.countable) {
-                        const key = event.type + "|" + personId + "|" + event.title;
+			const key = event.type + "|" + personId + "|" + event.title;
 			if (typeMap[key]) {
 				typeMap[key].count++;
 			} else {
 				typeMap[key] = {
 					...event,
-                                        person: personId,
+					person: personId,
 					count: 1,
 				};
 			}
 		} else {
 			merged.push({
 				...event,
-                                person: personId,
+				person: personId,
 				count: 0,
 			});
 		}
@@ -258,7 +258,7 @@ watch(
 		if (visible) {
 			addTitle.value = "";
 			addType.value = "water";
-                        addPerson.value = myPersonId;
+			addPerson.value = myPersonId;
 			currentStatus.value = props.status || "normal";
 			updateEvents();
 		}
@@ -286,29 +286,29 @@ async function doAdd() {
 	if (!addType.value) return;
 	const type = types.find((item) => item.id === addType.value);
 	const title = addTitle.value.trim() || (type ? type.name : "");
-        const personPayload = toPersonPayload(addPerson.value, persons.value);
+	const personPayload = toPersonPayload(addPerson.value, persons.value);
 	await addEvent(
 		props.year,
 		props.month,
 		props.day,
 		addType.value,
 		title,
-                personPayload,
+		personPayload,
 	);
 	addTitle.value = "";
 	emit("refresh");
 }
 
 async function incEvent(event) {
-        const personId = normalizePersonId(event.person || "both", persons.value);
-        const personPayload = toPersonPayload(personId, persons.value);
+	const personId = normalizePersonId(event.person || "both", persons.value);
+	const personPayload = toPersonPayload(personId, persons.value);
 	await addEvent(
 		props.year,
 		props.month,
 		props.day,
 		event.type,
 		event.title,
-                personPayload,
+		personPayload,
 	);
 	emit("refresh");
 }
@@ -344,19 +344,19 @@ function countableType(typeId) {
 }
 
 function findPersonConfig(personKey) {
-        const personId = normalizePersonId(personKey, persons.value);
-        return findPersonById(personId, persons.value);
+	const personId = normalizePersonId(personKey, persons.value);
+	return findPersonById(personId, persons.value);
 }
 
 function personColor(personN) {
 	const person =
-                findPersonConfig(personN);
+		findPersonConfig(personN);
 	return person ? person.color : "#9B59B6";
 }
 
 function personName(personN) {
 	const person =
-                findPersonConfig(personN);
+		findPersonConfig(personN);
 	return person ? person.name : "共同";
 }
 
@@ -694,7 +694,7 @@ function formatTime(time) {
 .add-input {
 	flex: 1;
 	height: 76rpx;
-	border: 1px solid #eee;
+	border: 1px solid var(--theme-ring);
 	border-radius: 40rpx;
 	padding: 0 28rpx;
 	font-size: 26rpx;
@@ -704,7 +704,7 @@ function formatTime(time) {
 
 .modal-dark .add-input {
 	background: #2c2c2e;
-	border-color: #48484a;
+	border-color: var(--theme-soft-bg-dark);
 	color: #e5e5e7;
 }
 
@@ -713,13 +713,14 @@ function formatTime(time) {
 	width: 80rpx;
 	height: 80rpx;
 	border-radius: 50%;
-	background: #1a1a1a;
+	background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
 	color: #fff;
 	font-size: 40rpx;
 	font-weight: 300;
 	line-height: 80rpx;
 	text-align: center;
 	margin-left: 14rpx;
+	box-shadow: 0 10rpx 20rpx var(--theme-ring);
 }
 
 .add-btn:active {
@@ -727,8 +728,8 @@ function formatTime(time) {
 }
 
 .modal-dark .add-btn {
-	background: #e5e5e7;
-	color: #1c1c1e;
+	background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
+	color: #fff;
 }
 
 /* ====== 底部 ====== */

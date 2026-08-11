@@ -1,5 +1,5 @@
 <template>
-	<view class="meal-week" :class="{ 'theme-dark': isDark }">
+	<view class="meal-week" :class="[pageThemeClass, { 'theme-dark': isDark }]">
 		<!-- 顶部栏 -->
 		<view class="top-bar" :style="navBarStyle">
 			<text class="top-back" @tap="goBack">‹</text>
@@ -98,7 +98,9 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
+import { onShow } from "@dcloudio/uni-app";
 import { getTheme } from "@/store/theme.js";
+import { getCurrentProfileThemeClass } from "@/store/profile-theme.js";
 import {
 	getMealPlan,
 	createMealPlan,
@@ -165,6 +167,7 @@ function toMaterial(item) {
 }
 
 const isDark = ref(getTheme() === "dark");
+const pageThemeClass = ref(getCurrentProfileThemeClass());
 const meals = MEALS;
 // 周计划数据来自服务端，初始为空，进入页面后异步加载
 const plan = reactive(emptyPlan());
@@ -176,6 +179,12 @@ const modal = reactive({ open: false, dayIndex: 0, mealId: "" });
 // 本周原材料清单（随周计划一起从服务端加载）
 const materials = reactive([]);
 const materialInput = ref("");
+
+// 周菜单页从其他页面切回时，同步刷新性别主题与明暗模式。
+onShow(() => {
+	isDark.value = getTheme() === "dark";
+	pageThemeClass.value = getCurrentProfileThemeClass();
+});
 
 /* 状态栏 / 胶囊按钮适配（与首页一致） */
 const navBarStyle = computed(() => {
@@ -599,7 +608,10 @@ loadWeek(0);
 
 <style lang="scss" scoped>
 .meal-week {
-	background: #fff;
+	background: linear-gradient(180deg,
+			var(--theme-page-top) 0%,
+			var(--theme-page-mid) 220rpx,
+			var(--theme-page-bottom) 100%);
 	height: 100vh;
 	box-sizing: border-box;
 	display: flex;
@@ -607,7 +619,10 @@ loadWeek(0);
 }
 
 .meal-week.theme-dark {
-	background: #1c1c1e;
+	background: linear-gradient(180deg,
+			var(--theme-page-top-dark) 0%,
+			var(--theme-page-mid-dark) 220rpx,
+			var(--theme-page-bottom-dark) 100%);
 }
 
 /* 顶部栏 */
@@ -797,18 +812,19 @@ loadWeek(0);
 	width: 64rpx;
 	height: 64rpx;
 	border-radius: 50%;
-	background: #1a1a1a;
+	background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
 	color: #fff;
 	font-size: 36rpx;
 	font-weight: 300;
 	line-height: 64rpx;
 	text-align: center;
 	margin-left: 14rpx;
+	box-shadow: 0 10rpx 20rpx var(--theme-ring);
 }
 
 .theme-dark .material-add-btn {
-	background: #e5e5e7;
-	color: #1c1c1e;
+	background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
+	color: #fff;
 }
 
 .nav-arrow {
@@ -855,11 +871,11 @@ loadWeek(0);
 }
 
 .day-card--today {
-	background: rgba(0, 122, 255, 0.06);
+	background: var(--theme-soft-bg);
 }
 
 .theme-dark .day-card--today {
-	background: rgba(10, 132, 255, 0.2);
+	background: var(--theme-soft-bg-dark);
 }
 
 .day-head {
@@ -890,7 +906,7 @@ loadWeek(0);
 }
 
 .day-name--today {
-	color: #007aff;
+	color: var(--theme-primary-strong);
 }
 
 .day-date {
@@ -1053,14 +1069,15 @@ loadWeek(0);
 .copy-btn {
 	padding: 14rpx 32rpx;
 	border-radius: 30rpx;
-	background: #1a1a1a;
+	background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
 	color: #fff;
 	font-size: 24rpx;
 	font-weight: 600;
+	box-shadow: 0 10rpx 20rpx var(--theme-ring);
 }
 
 .theme-dark .copy-btn {
-	background: #e5e5e7;
-	color: #1c1c1e;
+	background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
+	color: #fff;
 }
 </style>

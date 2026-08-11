@@ -1,5 +1,5 @@
 <template>
-	<view class="login-page" :class="{ 'login-dark': isDark }">
+	<view class="login-page" :class="[pageThemeClass, { 'login-dark': isDark }]">
 		<view class="login-card">
 			<!-- 标题 -->
 			<view class="login-header">
@@ -53,12 +53,14 @@
 
 <script setup>
 import { ref } from "vue";
-import { onLoad } from "@dcloudio/uni-app";
+import { onLoad, onShow } from "@dcloudio/uni-app";
 import { login, register, wechatLogin } from "@/api/auth.js";
 import { setAuth, checkAuth } from "@/store/auth.js";
 import { getTheme } from "@/store/theme.js";
+import { getCurrentProfileThemeClass } from "@/store/profile-theme.js";
 
 const isDark = ref(getTheme() === "dark");
+const pageThemeClass = ref(getCurrentProfileThemeClass());
 const isRegister = ref(false);
 const username = ref("");
 const password = ref("");
@@ -71,6 +73,13 @@ onLoad(() => {
 	if (checkAuth()) {
 		uni.reLaunch({ url: "/pages/index/index" });
 	}
+});
+
+// 登录页通常在未登录时打开，此时会回落到中性主题；
+// 如果本地还保留了用户资料，重新展示时也会同步到对应的主题色。
+onShow(() => {
+	isDark.value = getTheme() === "dark";
+	pageThemeClass.value = getCurrentProfileThemeClass();
 });
 
 function toggleGender(val) {
@@ -134,7 +143,10 @@ async function handleWechatLogin() {
 <style lang="scss" scoped>
 .login-page {
 	min-height: 100vh;
-	background: #fff;
+	background: linear-gradient(180deg,
+			var(--theme-page-top) 0%,
+			var(--theme-page-mid) 260rpx,
+			var(--theme-page-bottom) 100%);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -142,7 +154,10 @@ async function handleWechatLogin() {
 }
 
 .login-dark {
-	background: #1c1c1e;
+	background: linear-gradient(180deg,
+			var(--theme-page-top-dark) 0%,
+			var(--theme-page-mid-dark) 260rpx,
+			var(--theme-page-bottom-dark) 100%);
 }
 
 .login-card {
@@ -158,12 +173,12 @@ async function handleWechatLogin() {
 .login-title {
 	font-size: 48rpx;
 	font-weight: 700;
-	color: #1a1a1a;
+	color: var(--theme-primary-strong);
 	display: block;
 }
 
 .login-dark .login-title {
-	color: #e5e5e7;
+	color: var(--theme-primary);
 }
 
 .login-sub {
@@ -259,13 +274,13 @@ async function handleWechatLogin() {
 }
 
 .input:focus {
-	border-color: #007aff;
+	border-color: var(--theme-primary);
 	background: #fff;
 }
 
 .submit-btn {
 	height: 100rpx;
-	background: #1a1a1a;
+	background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
 	border-radius: 50rpx;
 	display: flex;
 	align-items: center;
@@ -274,6 +289,7 @@ async function handleWechatLogin() {
 	color: #fff;
 	font-weight: 600;
 	margin-top: 12rpx;
+	box-shadow: 0 14rpx 28rpx var(--theme-ring);
 }
 
 .submit-btn:active {
@@ -281,8 +297,8 @@ async function handleWechatLogin() {
 }
 
 .login-dark .submit-btn {
-	background: #e5e5e7;
-	color: #1c1c1e;
+	background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
+	color: #fff;
 }
 
 /* 性别选择 */
@@ -325,8 +341,8 @@ async function handleWechatLogin() {
 
 .gender-tag--active {
 	color: #fff !important;
-	background: #007aff !important;
-	border-color: #007aff !important;
+	background: var(--theme-primary) !important;
+	border-color: var(--theme-primary) !important;
 }
 
 /* 切换 */
@@ -337,10 +353,10 @@ async function handleWechatLogin() {
 
 .switch-link {
 	font-size: 26rpx;
-	color: #007aff;
+	color: var(--theme-primary-strong);
 }
 
 .login-dark .switch-link {
-	color: #0a84ff;
+	color: var(--theme-primary);
 }
 </style>

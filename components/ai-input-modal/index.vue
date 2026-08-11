@@ -206,11 +206,11 @@ function useTip(tip) {
 .ai-title {
 	font-size: 34rpx;
 	font-weight: 700;
-	color: #1a1a1a;
+	color: var(--theme-primary-strong);
 }
 
 .ai-mask--dark .ai-title {
-	color: #e5e5e7;
+	color: var(--theme-primary);
 }
 
 .ai-close {
@@ -344,17 +344,17 @@ function useTip(tip) {
 }
 
 .ai-btn--confirm {
-	background: #007aff;
+	background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
 	color: #fff;
 	padding: 18rpx 36rpx;
 }
 
 .ai-btn--confirm.disabled {
-	background: #b3d7ff;
+	background: var(--theme-soft-bg);
 }
 
 .ai-mask--dark .ai-btn--confirm.disabled {
-	background: #2c4a66;
+	background: var(--theme-soft-bg-dark);
 }
 
 .ai-btn--confirm text {
