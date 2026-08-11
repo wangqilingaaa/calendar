@@ -28,7 +28,13 @@ export const PERSON_COLORS = [
 
 /** 兜底人物列表（未登录或加载失败时） */
 export const DEFAULT_PERSONS = Object.freeze([
-	{ id: "both", name: "共同", color: PERSON_COLORS[2], personValue: "both" },
+	{
+		id: "both",
+		name: "共同",
+		identity_tag: "共同",
+		color: PERSON_COLORS[2],
+		personValue: "both",
+	},
 ]);
 
 /**
@@ -132,7 +138,7 @@ function extractPartnerTag(b) {
  *  - 统计聚合（按 id 分组）
  * 因此 id 统一使用数据库 id；"共同" 固定为 'both'。
  *
- * @returns {Promise<Array<{id: string|number, name: string, color: string, personValue: string|number}>>}
+ * @returns {Promise<Array<{id: string|number, name: string, identity_tag: string, color: string, personValue: string|number}>>}
  */
 export async function loadPersons() {
 	const user = getUser();
@@ -147,6 +153,9 @@ export async function loadPersons() {
 	appendPerson(persons, {
 		id: user.id,
 		name: selfTag,
+		// identity_tag 作为展示主口径单独保留，
+		// 这样组件层可以明确优先展示它，而不是继续复用 name 猜测含义。
+		identity_tag: selfTag,
 		color: PERSON_COLORS[0],
 		personValue: selfTag,
 	});
@@ -165,6 +174,9 @@ export async function loadPersons() {
 			appendPerson(persons, {
 				id: fallbackId,
 				name: tag,
+				// 绑定用户同样显式保留 identity_tag，
+				// 保证人物选择、人物标签等展示位都能拿到统一字段。
+				identity_tag: tag,
 				color: PERSON_COLORS[(i + 1) % PERSON_COLORS.length],
 				personValue: tag,
 			});
@@ -177,6 +189,7 @@ export async function loadPersons() {
 	appendPerson(persons, {
 		id: "both",
 		name: "共同",
+		identity_tag: "共同",
 		color: PERSON_COLORS[2],
 		personValue: "both",
 	});

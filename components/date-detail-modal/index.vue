@@ -93,7 +93,7 @@
 							borderColor: p.color + '60',
 						}
 						" @tap="addPerson = p.id">
-						<text>{{ p.name }}</text>
+						<text>{{ personDisplayText(p) }}</text>
 					</view>
 				</view>
 
@@ -348,6 +348,13 @@ function findPersonConfig(personKey) {
 	return findPersonById(personId, persons.value);
 }
 
+// 人物展示统一优先读取 identity_tag。
+// 这样既能满足“人物选择展示身份标签”的需求，也能兼容旧数据里只有 name 的情况。
+function personDisplayText(person) {
+	if (!person) return "共同";
+	return person.identity_tag || person.name || "共同";
+}
+
 function personColor(personN) {
 	const person =
 		findPersonConfig(personN);
@@ -357,7 +364,7 @@ function personColor(personN) {
 function personName(personN) {
 	const person =
 		findPersonConfig(personN);
-	return person ? person.name : "共同";
+	return personDisplayText(person);
 }
 
 function formatTime(time) {
