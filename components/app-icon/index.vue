@@ -17,7 +17,7 @@ const ICON_MAP = {
 	anniversary: "ri-heart-3-line",
 	task: "ri-checkbox-circle-line",
 	custom: "ri-edit-line",
-	edit: "ri-edit-line",
+	edit: "ri-pencil-line",
 	husband: "ri-men-line",
 	wife: "ri-women-line",
 	both: "ri-group-line",

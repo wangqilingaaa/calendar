@@ -30,6 +30,7 @@
 .ri-checkbox-circle-fill:before   { content: "\eb97"; }
 .ri-edit-line:before              { content: "\ed85"; }
 .ri-edit-fill:before              { content: "\ed84"; }
+.ri-pencil-line:before            { content: "\efe0"; }
 .ri-weight-line:before            { content: "\f522"; }
 .ri-weight-fill:before            { content: "\f521"; }
 
