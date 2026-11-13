@@ -38,42 +38,44 @@
 					<text v-if="!events.length" class="muted">— 空</text>
 				</view>
 				<view v-if="events.length" class="event-list">
-					<view v-for="ev in events" :key="ev.id" class="event-item">
+					<view v-for="item in eventViews" :key="item.ev.id" class="event-item">
 						<view class="ev-left">
-							<app-icon :name="ev.type" :size="36" :color="typeColor(ev.type)" />
+							<app-icon :name="item.ev.type" :size="36" :color="typeColor(item.ev.type)" />
 							<view class="ev-info">
-								<text class="ev-title">{{ ev.title }}</text>
+								<text class="ev-title">{{ item.title }}</text>
+								<text v-if="item.metrics" class="ev-exercise-tag">{{ item.metrics }}</text>
+								<text v-if="item.note" class="ev-note">{{ item.note }}</text>
 								<view class="ev-meta">
 									<text class="ev-type">{{
-										typeName(ev.type)
+										typeName(item.ev.type)
 									}}</text>
 									<view class="ev-person-tag" :style="{
 										backgroundColor:
-											personColor(ev.person) + '18',
-										color: personColor(ev.person),
+											personColor(item.ev.person) + '18',
+										color: personColor(item.ev.person),
 									}">
-										{{ personName(ev.person) }}
+										{{ personName(item.ev.person) }}
 									</view>
 								</view>
-								<text v-if="ev.createdAt" class="ev-time">{{
-									formatTime(ev.createdAt)
+								<text v-if="item.ev.createdAt" class="ev-time">{{
+									formatTime(item.ev.createdAt)
 								}}</text>
 							</view>
 						</view>
 						<view class="ev-right">
-							<template v-if="countableType(ev.type) && ev.count > 0">
+							<template v-if="countableType(item.ev.type) && item.ev.count > 0">
 								<view class="count-ctrl">
-									<text class="count-btn" @tap.stop="decEvent(ev)">-</text>
+									<text class="count-btn" @tap.stop="decEvent(item.ev)">-</text>
 									<text class="count-num">{{
-										ev.count
+										item.ev.count
 									}}</text>
-									<text class="count-btn" @tap.stop="incEvent(ev)">+</text>
+									<text class="count-btn" @tap.stop="incEvent(item.ev)">+</text>
 								</view>
 							</template>
-							<view class="ev-edit" @tap.stop="startEdit(ev)">
+							<view class="ev-edit" @tap.stop="startEdit(item.ev)">
 								<app-icon name="edit" :size="32" :color="isDark ? '#8e8e93' : '#999'" />
 							</view>
-							<text class="del-btn" @tap.stop="delEvent(ev.id)">x</text>
+							<text class="del-btn" @tap.stop="delEvent(item.ev.id)">x</text>
 						</view>
 					</view>
 				</view>
@@ -225,6 +227,7 @@ import { getTheme } from "@/store/theme.js";
 import { getUser } from "@/store/auth.js";
 import AppIcon from "@/components/app-icon/index.vue";
 import gymActionData from "@/data/gym-actions.json";
+import { parseExerciseTitle, formatExerciseTitle } from "@/utils/exercise.js";
 import { putDiaryStatus } from "../../api/diary";
 
 const props = defineProps({
@@ -300,6 +303,29 @@ const weekdayLabel = computed(() => {
 	const date = new Date(props.year, props.month, props.day);
 	return "周" + ["日", "一", "二", "三", "四", "五", "六"][date.getDay()];
 });
+
+// 运动记录的备注是单一文本字段，列表展示时拆成「动作 + 组次/重量 + 备注」
+const eventViews = computed(() =>
+	events.value.map((ev) => {
+		const parsed =
+			ev.type === "exercise" ? parseExerciseTitle(ev.title) : null;
+		const info = parsed && (parsed.hasMetrics || parsed.weight) ? parsed : null;
+		const metrics = info
+			? [
+					info.hasMetrics ? `${info.sets}组×${info.reps}次` : "",
+					info.weight ? `${info.weight}kg` : "",
+				]
+					.filter(Boolean)
+					.join(" · ")
+			: "";
+		return {
+			ev,
+			title: info ? info.action || typeName(ev.type) : ev.title,
+			metrics,
+			note: info ? info.note : "",
+		};
+	}),
+);
 
 const addPlaceholder = computed(() => "备注（选填）");
 
@@ -416,8 +442,10 @@ function startEdit(event) {
 		const parsed = parseExerciseTitle(title);
 		if (parsed) {
 			exerciseAction.value = parsed.action;
-			exerciseSets.value = parsed.sets;
-			exerciseReps.value = parsed.reps;
+			if (parsed.hasMetrics) {
+				exerciseSets.value = parsed.sets;
+				exerciseReps.value = parsed.reps;
+			}
 			exerciseWeight.value = parsed.weight;
 			addTitle.value = parsed.note;
 		}
@@ -434,52 +462,19 @@ function onEditDateChange(event) {
 	editDate.value = event.detail.value;
 }
 
-// 解析运动备注；历史自由文本整体作为动作名回填
-function parseExerciseTitle(title) {
-	const text = String(title || "").trim();
-	if (!text || text === typeName("exercise")) return null;
-
-	const parts = text.split(" · ");
-	const parsed = {
-		action: parts[0] || "",
-		sets: "4",
-		reps: "10",
-		weight: "",
-		note: "",
-	};
-	let index = 1;
-
-	const setsReps = (parts[index] || "")
-		.trim()
-		.match(/^(\d+)组\s*[×xX]\s*(\d+)次$/);
-	if (setsReps) {
-		parsed.sets = setsReps[1];
-		parsed.reps = setsReps[2];
-		index += 1;
-	}
-
-	const weight = (parts[index] || "")
-		.trim()
-		.match(/^([\d.]+)\s*kg$/i);
-	if (weight) {
-		parsed.weight = weight[1];
-		index += 1;
-	}
-
-	parsed.note = parts.slice(index).join(" · ");
-	return parsed;
-}
-
 // 把结构化输入拼成一条可读备注，后端仍只存 event_remark 一个字段
 // 例如：卧推 · 4组×10次 · 60kg · 状态不错
 function buildExerciseTitle(sets, reps, weight) {
-	const parts = [exerciseActionKeyword.value, sets + "组×" + reps + "次"];
-	if (Number.isFinite(weight) && weight > 0) {
-		parts.push(Number(weight.toFixed(2)) + "kg");
-	}
-	const note = addTitle.value.trim();
-	if (note) parts.push(note);
-	return parts.join(" · ");
+	return formatExerciseTitle({
+		action: exerciseActionKeyword.value,
+		sets,
+		reps,
+		weight:
+			Number.isFinite(weight) && weight > 0
+				? Number(weight.toFixed(2))
+				: "",
+		note: addTitle.value.trim(),
+	});
 }
 
 async function doAdd() {
@@ -868,6 +863,36 @@ function formatTime(time) {
 
 .modal-dark .ev-title {
 	color: #e5e5e7;
+}
+
+.ev-exercise-tag {
+	display: inline-block;
+	margin-top: 6rpx;
+	padding: 2rpx 12rpx;
+	border-radius: 8rpx;
+	font-size: 20rpx;
+	font-weight: 600;
+	color: #388e3c;
+	background: rgba(76, 175, 80, 0.12);
+}
+
+.modal-dark .ev-exercise-tag {
+	color: #81c784;
+	background: rgba(76, 175, 80, 0.22);
+}
+
+.ev-note {
+	display: block;
+	margin-top: 4rpx;
+	font-size: 22rpx;
+	color: #666;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.modal-dark .ev-note {
+	color: #a1a1a6;
 }
 
 .ev-meta {

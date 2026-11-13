@@ -101,7 +101,7 @@ const isDark = ref(getTheme() === "dark");
 const inputValue = ref("");
 const tips = ref([
 	"明天老公喝水 500ml",
-	"今晚老婆运动 30 分钟",
+	"今晚老婆卧推 4组×10次 60kg",
 	"后天一起吃纪念日蛋糕",
 	"今天体重 62.5kg",
 ]);

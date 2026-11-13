@@ -112,6 +112,7 @@ import { createDiary } from "@/api/diary.js";
 import { getSpeechRecognitionManager, parseDiaryByText } from "@/api/ai.js";
 import { getUser } from "@/store/auth.js";
 import { getCurrentProfileThemeClass } from "@/store/profile-theme.js";
+import { normalizeExerciseRemark } from "@/utils/exercise.js";
 import AppIcon from "@/components/app-icon/index.vue";
 import DateDetailModal from "@/components/date-detail-modal/index.vue";
 import AiInputModal from "@/components/ai-input-modal/index.vue";
@@ -260,7 +261,7 @@ async function processAiText(text) {
 		uni.showLoading({ title: "AI 解析中...", mask: true });
 		const data = await parseDiaryByText(text, myTag, persons.value);
 		uni.hideLoading();
-		await executeAiAdd(data);
+		await executeAiAdd(data, text);
 	} catch (e) {
 		uni.hideLoading();
 	}
@@ -304,11 +305,16 @@ async function executeAiAdd(data, originalText) {
 
 	try {
 		uni.showLoading({ title: "添加中...", mask: true });
+		const rawRemark = data.event_remark || originalText || "";
 		await createDiary({
 			date: data.date,
 			person,
 			event: data.event,
-			eventRemark: data.event_remark || originalText || "",
+			// AI 返回的运动备注格式不固定，入库前统一成「动作 · N组×M次 · Xkg · 备注」
+			eventRemark:
+				type.id === "exercise"
+					? normalizeExerciseRemark(rawRemark)
+					: rawRemark,
 			attachments: Array.isArray(data.attachments)
 				? data.attachments
 				: [],
