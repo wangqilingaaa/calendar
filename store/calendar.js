@@ -15,6 +15,7 @@
 
 import {
 	createDiary,
+	updateDiary,
 	queryDiaryByDay,
 	queryDiaryByMonth,
 	deleteDiary,
@@ -130,6 +131,26 @@ export async function addEvent(year, month, day, eventTypeId, title, personId) {
 /** 删除事件（按 API ID） */
 export async function removeEvent(apiId) {
 	return deleteDiary(apiId);
+}
+
+/**
+ * 修改事件
+ * PUT /diary/:id，date 使用 yyyy-mm-dd；未传字段保持原值。
+ * 这里不传 attachments，避免清空原附件。
+ */
+export async function updateEvent(
+	apiId,
+	date,
+	eventTypeId,
+	title,
+	person,
+) {
+	return updateDiary(apiId, {
+		date,
+		person: person || "",
+		event: typeNameById(eventTypeId),
+		event_remark: title || "",
+	});
 }
 
 /** 减少可计数事件 = 删除最新一条同类型、同备注、同人物的日记 */

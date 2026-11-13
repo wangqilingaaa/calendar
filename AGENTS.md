@@ -28,7 +28,7 @@ calendar/
 │   └── weekly-meal/index.vue    # 本周餐计划：7 天 × 4 餐次 + 原材料清单
 ├── components/
 │   ├── app-icon/index.vue       # Remix Icon 封装（ICON_MAP 映射）
-│   ├── date-detail-modal/       # 日期详情弹窗：状态切换 + 事件增删 + 人物选择 + 运动结构化录入
+│   ├── date-detail-modal/       # 日期详情弹窗：状态切换 + 事件增删改 + 人物选择 + 运动结构化录入
 │   ├── ai-input-modal/          # AI 文字输入、示例提示、解析结果确认
 │   ├── meal-detail-modal/       # 某天某餐次的菜单/原材料编辑
 │   └── trend-line-chart/        # 纯 view 绘制的折线图（体重趋势）
@@ -48,6 +48,8 @@ calendar/
 │   └── profile-theme.js         # 按用户性别返回资料主题类
 ├── data/
 │   └── gym-actions.json         # 健身房动作库（联想列表 + 常用动作）
+├── scripts/
+│   └── release-h5.sh            # H5 发版：构建/上传/备份/切换/健康检查
 ├── static/fonts/                # remixicon.css + woff2 字体
 ├── App.vue                      # 启动登录检查 + 全局 CSS 变量与主题类
 ├── main.js                      # Vue 实例化
@@ -64,6 +66,17 @@ calendar/
 - **生产构建**: HBuilderX → 发行 → 小程序-微信
 
 若后续迁移到 CLI，使用 `@dcloudio/uni-cli`。
+
+## 发版（H5）
+
+H5 站点部署在服务器 `/var/www/calendar`，由 nginx `calendar-923.conf` 监听 923 端口：
+
+- 访问地址：`http://112.124.7.78:923/`
+- 发版命令：`scripts/release-h5.sh`
+  - `--dry-run`：只构建/上传/解压校验，不改线上目录
+  - `--skip-build`：跳过构建，发布现有 `unpackage/dist/build/web`
+- 脚本使用 HBuilderX 内置 uni-app 编译器无界面构建 H5，经 workbench CLI 上传，备份线上目录到 `/var/www/calendar.bak-<时间戳>` 后原子切换，并做 HTTP 200 健康检查
+- app 端（Android/iOS）与小程序由开发者自行打包，不走该脚本
 
 ## 架构
 
@@ -90,6 +103,7 @@ App.vue (onLaunch 检查登录态)
   - `normalizePersonId` 兼容历史值（identity_tag / username / husband / wife / 名称）；`toPersonPayload` 转为接口提交值
 - **体重**：从 `weight` 事件的备注中解析 20–300 区间的数值，统计页按人物生成趋势点
 - **运动（健身房）**：日期弹窗选中「运动」时切换为健身房记录表单（动作联想输入 + 组数/次数/重量 + 备注），提交时拼接为 `动作 · N组×M次 · 重量kg · 备注`（重量、备注选填）写入 `event_remark`，后端仍只存这一个文本字段；动作联想库维护在 `data/gym-actions.json`
+- **事件编辑**：调用 `PUT /diary/{id}` 部分更新（未传字段保持原值），弹窗编辑态可修改日期（支持跨天）/人物/类型/备注；不传 `attachments` 以保留原附件，`CreatedAt` 保持不变
 
 ## 样式主题
 

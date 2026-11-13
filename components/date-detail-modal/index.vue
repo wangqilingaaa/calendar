@@ -8,7 +8,7 @@
 			</view>
 
 			<!-- ====== 日期状态 ====== -->
-			<view class="block">
+			<view v-if="!editingEvent" class="block">
 				<view class="status-row">
 					<view v-for="s in statuses" :key="s.id" class="status-dot" :class="{ active: currentStatus === s.id }"
 						@tap="changeStatus(s.id)">
@@ -32,7 +32,7 @@
 			</view>
 
 			<!-- ====== 事件列表 ====== -->
-			<view class="block">
+			<view v-if="!editingEvent" class="block">
 				<view class="block-title">
 					<text>事件</text>
 					<text v-if="!events.length" class="muted">— 空</text>
@@ -70,15 +70,33 @@
 									<text class="count-btn" @tap.stop="incEvent(ev)">+</text>
 								</view>
 							</template>
+							<view class="ev-edit" @tap.stop="startEdit(ev)">
+								<app-icon name="edit" :size="32" :color="isDark ? '#8e8e93' : '#999'" />
+							</view>
 							<text class="del-btn" @tap.stop="delEvent(ev.id)">x</text>
 						</view>
 					</view>
 				</view>
 			</view>
 
-			<!-- ====== 添加事件 ====== -->
+			<!-- ====== 添加 / 编辑事件 ====== -->
 			<view class="block">
-				<view class="block-title">添加</view>
+				<view class="block-title">
+					<text>{{ editingEvent ? "编辑事件" : "添加" }}</text>
+					<text v-if="editingEvent" class="block-title-hint">— {{ editingEvent.title }}</text>
+					<text v-if="editingEvent" class="block-title-action" @tap="cancelEdit">取消</text>
+				</view>
+
+				<!-- 编辑时可跨天修改日期 -->
+				<view v-if="editingEvent" class="edit-date-row">
+					<text class="ex-label">日期</text>
+					<picker class="edit-date-picker" mode="date" :value="editDate" @change="onEditDateChange">
+						<view class="edit-date-box">
+							<text class="edit-date-text">{{ editDate }}</text>
+							<text class="edit-date-arrow">›</text>
+						</view>
+					</picker>
+				</view>
 
 				<!-- 人物选择 -->
 				<view class="person-row">
@@ -163,7 +181,7 @@
 
 					<view class="ex-submit" @tap="doAdd">
 						<app-icon name="exercise" :size="32" color="#fff" />
-						<text>添加健身记录</text>
+						<text>{{ editingEvent ? "保存修改" : "添加健身记录" }}</text>
 					</view>
 				</view>
 
@@ -171,13 +189,14 @@
 				<view v-else class="add-bar">
 					<input class="add-input" v-model="addTitle" :placeholder="addPlaceholder" confirm-type="done"
 						@confirm="doAdd" />
-					<text class="add-btn" @tap="doAdd">+</text>
+					<text v-if="!editingEvent" class="add-btn" @tap="doAdd">+</text>
 				</view>
+				<view v-if="editingEvent && !isExercise" class="edit-submit" @tap="doAdd">保存修改</view>
 			</view>
 
 			<!-- 底部 -->
 			<view class="sheet-foot">
-				<text v-if="events.length" class="foot-link danger" @tap="clearAll">清空全部</text>
+				<text v-if="events.length && !editingEvent" class="foot-link danger" @tap="clearAll">清空全部</text>
 				<text class="foot-link" @tap="$emit('close')">关闭</text>
 			</view>
 		</view>
@@ -188,6 +207,7 @@
 import { ref, computed, watch } from "vue";
 import {
 	addEvent,
+	updateEvent,
 	removeEvent,
 	decrementEvent,
 	clearDateEvents,
@@ -247,6 +267,9 @@ const types = EVENT_TYPES;
 const isDark = ref(getTheme() === "dark");
 const currentStatus = ref("normal");
 const events = ref([]);
+const editingEvent = ref(null);
+const editDate = ref("");
+const saving = ref(false);
 const addType = ref("water");
 const addTitle = ref("");
 // 当前角色身份默认选中数据库 user.id；
@@ -331,10 +354,8 @@ watch(
 	() => props.visible,
 	(visible) => {
 		if (visible) {
-			addTitle.value = "";
-			addType.value = "water";
-			addPerson.value = myPersonId;
-			resetExerciseForm();
+			editingEvent.value = null;
+			resetAddForm();
 			currentStatus.value = props.status || "normal";
 			updateEvents();
 		}
@@ -358,11 +379,95 @@ async function changeStatus(statusId) {
 	emit("refresh");
 }
 
+function resetAddForm() {
+	addTitle.value = "";
+	addType.value = "water";
+	addPerson.value = myPersonId;
+	editDate.value = "";
+	resetExerciseForm();
+}
+
 function resetExerciseForm() {
 	exerciseAction.value = "";
 	exerciseSets.value = "4";
 	exerciseReps.value = "10";
 	exerciseWeight.value = "";
+}
+
+function cancelEdit() {
+	if (saving.value) return;
+	editingEvent.value = null;
+	resetAddForm();
+}
+
+// 编辑回填：普通事件回填备注，运动事件尝试解析「动作 · N组×M次 · Xkg · 备注」
+function startEdit(event) {
+	editingEvent.value = event;
+	editDate.value = dateKey(props.year, props.month, props.day);
+	addPerson.value = normalizePersonId(event.person || "both", persons.value);
+	addType.value = event.type;
+	addTitle.value = "";
+	resetExerciseForm();
+
+	const title = event.title || "";
+	const type = types.find((item) => item.id === event.type);
+
+	if (event.type === "exercise") {
+		const parsed = parseExerciseTitle(title);
+		if (parsed) {
+			exerciseAction.value = parsed.action;
+			exerciseSets.value = parsed.sets;
+			exerciseReps.value = parsed.reps;
+			exerciseWeight.value = parsed.weight;
+			addTitle.value = parsed.note;
+		}
+		return;
+	}
+
+	// 标题等于类型名时说明原记录没有备注，输入框保持为空
+	if (title && (!type || title !== type.name)) {
+		addTitle.value = title;
+	}
+}
+
+function onEditDateChange(event) {
+	editDate.value = event.detail.value;
+}
+
+// 解析运动备注；历史自由文本整体作为动作名回填
+function parseExerciseTitle(title) {
+	const text = String(title || "").trim();
+	if (!text || text === typeName("exercise")) return null;
+
+	const parts = text.split(" · ");
+	const parsed = {
+		action: parts[0] || "",
+		sets: "4",
+		reps: "10",
+		weight: "",
+		note: "",
+	};
+	let index = 1;
+
+	const setsReps = (parts[index] || "")
+		.trim()
+		.match(/^(\d+)组\s*[×xX]\s*(\d+)次$/);
+	if (setsReps) {
+		parsed.sets = setsReps[1];
+		parsed.reps = setsReps[2];
+		index += 1;
+	}
+
+	const weight = (parts[index] || "")
+		.trim()
+		.match(/^([\d.]+)\s*kg$/i);
+	if (weight) {
+		parsed.weight = weight[1];
+		index += 1;
+	}
+
+	parsed.note = parts.slice(index).join(" · ");
+	return parsed;
 }
 
 // 把结构化输入拼成一条可读备注，后端仍只存 event_remark 一个字段
@@ -378,7 +483,7 @@ function buildExerciseTitle(sets, reps, weight) {
 }
 
 async function doAdd() {
-	if (!addType.value) return;
+	if (!addType.value || saving.value) return;
 	const type = types.find((item) => item.id === addType.value);
 	let title = "";
 
@@ -408,15 +513,65 @@ async function doAdd() {
 		title = addTitle.value.trim() || (type ? type.name : "");
 	}
 
-	const personPayload = toPersonPayload(addPerson.value, persons.value);
-	await addEvent(
-		props.year,
-		props.month,
-		props.day,
-		addType.value,
-		title,
-		personPayload,
-	);
+	const personId = normalizePersonId(addPerson.value, persons.value);
+	const personPayload = toPersonPayload(personId, persons.value);
+
+	if (editingEvent.value) {
+		const original = editingEvent.value;
+		// 没有任何修改时直接退出编辑，避免无谓请求
+		if (
+			original.type === addType.value &&
+			original.person === personId &&
+			original.title === title &&
+			editDate.value === dateKey(props.year, props.month, props.day)
+		) {
+			cancelEdit();
+			return;
+		}
+
+		const movedDate =
+			editDate.value !== dateKey(props.year, props.month, props.day);
+
+		saving.value = true;
+		try {
+			await updateEvent(
+				original.id,
+				editDate.value,
+				addType.value,
+				title,
+				personPayload,
+			);
+		} catch (_) {
+			// 请求层已提示错误，保留编辑态方便重试
+			return;
+		} finally {
+			saving.value = false;
+		}
+
+		editingEvent.value = null;
+		resetAddForm();
+		if (movedDate) {
+			uni.showToast({ title: "已移动到所选日期", icon: "none" });
+		}
+		emit("refresh");
+		return;
+	}
+
+	saving.value = true;
+	try {
+		await addEvent(
+			props.year,
+			props.month,
+			props.day,
+			addType.value,
+			title,
+			personPayload,
+		);
+	} catch (_) {
+		return;
+	} finally {
+		saving.value = false;
+	}
 	addTitle.value = "";
 	// 保留组次便于连续记录下一个动作，动作和重量需要重新填写
 	if (isExercise.value) {
@@ -583,6 +738,8 @@ function formatTime(time) {
 }
 
 .block-title {
+	display: flex;
+	align-items: center;
 	font-size: 26rpx;
 	font-weight: 600;
 	color: #1a1a1a;
@@ -591,6 +748,31 @@ function formatTime(time) {
 
 .modal-dark .block-title {
 	color: #e5e5e7;
+}
+
+.block-title-hint {
+	flex: 1;
+	min-width: 0;
+	margin-left: 10rpx;
+	font-size: 22rpx;
+	font-weight: 400;
+	color: #999;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.block-title-action {
+	flex-shrink: 0;
+	margin-left: 16rpx;
+	font-size: 24rpx;
+	font-weight: 500;
+	color: #999;
+}
+
+.modal-dark .block-title-hint,
+.modal-dark .block-title-action {
+	color: #8e8e93;
 }
 
 .muted {
@@ -771,6 +953,11 @@ function formatTime(time) {
 	color: #e5e5e7;
 }
 
+.ev-edit {
+	padding: 4rpx 10rpx;
+	margin-right: 4rpx;
+}
+
 .del-btn {
 	font-size: 32rpx;
 	color: #ccc;
@@ -826,6 +1013,50 @@ function formatTime(time) {
 
 .modal-dark .type-chip.active {
 	background: #2c2c2e;
+}
+
+/* ====== 编辑日期 ====== */
+.edit-date-row {
+	margin-bottom: 20rpx;
+}
+
+.edit-date-picker {
+	display: block;
+}
+
+.edit-date-box {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	height: 72rpx;
+	padding: 0 24rpx;
+	box-sizing: border-box;
+	background: #f8f8f8;
+	border-radius: 16rpx;
+}
+
+.modal-dark .edit-date-box {
+	background: #2c2c2e;
+}
+
+.edit-date-text {
+	font-size: 26rpx;
+	color: #1a1a1a;
+}
+
+.modal-dark .edit-date-text {
+	color: #e5e5e7;
+}
+
+.edit-date-arrow {
+	font-size: 36rpx;
+	font-weight: 300;
+	color: #999;
+}
+
+.modal-dark .edit-date-arrow {
+	color: #8e8e93;
 }
 
 /* ====== 运动表单 ====== */
@@ -990,7 +1221,8 @@ function formatTime(time) {
 	color: #636366;
 }
 
-.ex-submit {
+.ex-submit,
+.edit-submit {
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -1004,7 +1236,14 @@ function formatTime(time) {
 	box-shadow: 0 10rpx 20rpx rgba(76, 175, 80, 0.2);
 }
 
-.ex-submit:active {
+.edit-submit {
+	margin-top: 20rpx;
+	background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
+	box-shadow: 0 10rpx 20rpx var(--theme-ring);
+}
+
+.ex-submit:active,
+.edit-submit:active {
 	opacity: 0.85;
 }
 

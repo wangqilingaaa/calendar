@@ -14,6 +14,11 @@ export function createDiary({ date, person, event, eventRemark, attachments }) {
 	});
 }
 
+/** 修改日记（未传字段保持原值） */
+export function updateDiary(id, data) {
+	return put("/diary/" + id, data);
+}
+
 /** 按天查询 */
 export function queryDiaryByDay(
 	date,
