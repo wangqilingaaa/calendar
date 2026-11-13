@@ -111,8 +111,64 @@
 					</view>
 				</scroll-view>
 
-				<!-- 输入行 -->
-				<view class="add-bar">
+				<!-- 运动记录：健身房场景，动作联想 + 组次 + 重量 -->
+				<view v-if="isExercise" class="exercise-form">
+					<view class="ex-field">
+						<text class="ex-label">动作</text>
+						<view class="ex-input-wrap">
+							<input class="ex-input" v-model="exerciseAction" placeholder="输入或选择动作，如 卧推、深蹲"
+								placeholder-class="ex-placeholder" confirm-type="done" />
+						</view>
+						<view v-if="gymSuggestions.length" class="ex-suggest">
+							<view v-for="name in gymSuggestions" :key="name" class="ex-suggest-chip"
+								:class="{ active: exerciseActionKeyword === name }" @tap="exerciseAction = name">{{ name }}</view>
+						</view>
+						<text v-else class="ex-suggest-empty">没有匹配动作，将直接使用自定义名称</text>
+					</view>
+
+					<view class="ex-metrics">
+						<view class="ex-metric">
+							<text class="ex-label">组数</text>
+							<view class="ex-metric-box">
+								<input class="ex-metric-input" type="number" v-model="exerciseSets" :maxlength="2"
+									confirm-type="done" />
+								<text class="ex-metric-unit">组</text>
+							</view>
+						</view>
+						<view class="ex-metric">
+							<text class="ex-label">次数</text>
+							<view class="ex-metric-box">
+								<input class="ex-metric-input" type="number" v-model="exerciseReps" :maxlength="3"
+									confirm-type="done" />
+								<text class="ex-metric-unit">次</text>
+							</view>
+						</view>
+						<view class="ex-metric">
+							<text class="ex-label">重量</text>
+							<view class="ex-metric-box">
+								<input class="ex-metric-input" type="digit" v-model="exerciseWeight" placeholder="选填"
+									placeholder-class="ex-placeholder" confirm-type="done" />
+								<text class="ex-metric-unit">kg</text>
+							</view>
+						</view>
+					</view>
+
+					<view class="ex-field">
+						<text class="ex-label">备注</text>
+						<view class="ex-input-wrap">
+							<input class="ex-input" v-model="addTitle" placeholder="选填，如 第一个动作、状态不错"
+								placeholder-class="ex-placeholder" confirm-type="done" @confirm="doAdd" />
+						</view>
+					</view>
+
+					<view class="ex-submit" @tap="doAdd">
+						<app-icon name="exercise" :size="32" color="#fff" />
+						<text>添加健身记录</text>
+					</view>
+				</view>
+
+				<!-- 其他类型：保持单行备注输入 -->
+				<view v-else class="add-bar">
 					<input class="add-input" v-model="addTitle" :placeholder="addPlaceholder" confirm-type="done"
 						@confirm="doAdd" />
 					<text class="add-btn" @tap="doAdd">+</text>
@@ -148,6 +204,7 @@ import {
 import { getTheme } from "@/store/theme.js";
 import { getUser } from "@/store/auth.js";
 import AppIcon from "@/components/app-icon/index.vue";
+import gymActionData from "@/data/gym-actions.json";
 import { putDiaryStatus } from "../../api/diary";
 
 const props = defineProps({
@@ -197,6 +254,24 @@ const addTitle = ref("");
 const me = getUser();
 const myPersonId = (me && me.id) || "both";
 const addPerson = ref(myPersonId);
+
+// 健身房动作库维护在 data/gym-actions.json，输入时用于联想，也允许自定义名称
+const GYM_ACTIONS = gymActionData.actions || [];
+const POPULAR_GYM_ACTIONS = gymActionData.popular || [];
+const exerciseAction = ref("");
+const exerciseSets = ref("4");
+const exerciseReps = ref("10");
+const exerciseWeight = ref("");
+
+const isExercise = computed(() => addType.value === "exercise");
+
+const exerciseActionKeyword = computed(() => exerciseAction.value.trim());
+
+const gymSuggestions = computed(() => {
+	const keyword = exerciseActionKeyword.value;
+	if (!keyword) return POPULAR_GYM_ACTIONS;
+	return GYM_ACTIONS.filter((name) => name.includes(keyword)).slice(0, 6);
+});
 
 const weekdayLabel = computed(() => {
 	const date = new Date(props.year, props.month, props.day);
@@ -259,6 +334,7 @@ watch(
 			addTitle.value = "";
 			addType.value = "water";
 			addPerson.value = myPersonId;
+			resetExerciseForm();
 			currentStatus.value = props.status || "normal";
 			updateEvents();
 		}
@@ -282,10 +358,56 @@ async function changeStatus(statusId) {
 	emit("refresh");
 }
 
+function resetExerciseForm() {
+	exerciseAction.value = "";
+	exerciseSets.value = "4";
+	exerciseReps.value = "10";
+	exerciseWeight.value = "";
+}
+
+// 把结构化输入拼成一条可读备注，后端仍只存 event_remark 一个字段
+// 例如：卧推 · 4组×10次 · 60kg · 状态不错
+function buildExerciseTitle(sets, reps, weight) {
+	const parts = [exerciseActionKeyword.value, sets + "组×" + reps + "次"];
+	if (Number.isFinite(weight) && weight > 0) {
+		parts.push(Number(weight.toFixed(2)) + "kg");
+	}
+	const note = addTitle.value.trim();
+	if (note) parts.push(note);
+	return parts.join(" · ");
+}
+
 async function doAdd() {
 	if (!addType.value) return;
 	const type = types.find((item) => item.id === addType.value);
-	const title = addTitle.value.trim() || (type ? type.name : "");
+	let title = "";
+
+	if (isExercise.value) {
+		if (!exerciseActionKeyword.value) {
+			uni.showToast({ title: "请输入动作名称", icon: "none" });
+			return;
+		}
+		const sets = parseInt(exerciseSets.value, 10);
+		if (!sets || sets <= 0) {
+			uni.showToast({ title: "请填写组数", icon: "none" });
+			return;
+		}
+		const reps = parseInt(exerciseReps.value, 10);
+		if (!reps || reps <= 0) {
+			uni.showToast({ title: "请填写次数", icon: "none" });
+			return;
+		}
+		const weightText = exerciseWeight.value.trim();
+		const weight = parseFloat(weightText);
+		if (weightText && (!Number.isFinite(weight) || weight <= 0)) {
+			uni.showToast({ title: "重量填写有误", icon: "none" });
+			return;
+		}
+		title = buildExerciseTitle(sets, reps, weight);
+	} else {
+		title = addTitle.value.trim() || (type ? type.name : "");
+	}
+
 	const personPayload = toPersonPayload(addPerson.value, persons.value);
 	await addEvent(
 		props.year,
@@ -296,6 +418,11 @@ async function doAdd() {
 		personPayload,
 	);
 	addTitle.value = "";
+	// 保留组次便于连续记录下一个动作，动作和重量需要重新填写
+	if (isExercise.value) {
+		exerciseAction.value = "";
+		exerciseWeight.value = "";
+	}
 	emit("refresh");
 }
 
@@ -314,7 +441,16 @@ async function incEvent(event) {
 }
 
 async function decEvent(event) {
-	await decrementEvent(props.year, props.month, props.day, event.type);
+	// 同一天可能有多种运动记录，需要带上备注和人物才能精确减少对应那一行
+	await decrementEvent(
+		props.year,
+		props.month,
+		props.day,
+		event.type,
+		event.title,
+		event.person,
+		persons.value,
+	);
 	emit("refresh");
 }
 
@@ -690,6 +826,190 @@ function formatTime(time) {
 
 .modal-dark .type-chip.active {
 	background: #2c2c2e;
+}
+
+/* ====== 运动表单 ====== */
+.exercise-form {
+	background: #f8f8f8;
+	border-radius: 20rpx;
+	padding: 24rpx;
+}
+
+.modal-dark .exercise-form {
+	background: #2c2c2e;
+}
+
+.ex-field {
+	margin-bottom: 22rpx;
+}
+
+.ex-label {
+	display: block;
+	font-size: 22rpx;
+	color: #999;
+	margin-bottom: 12rpx;
+}
+
+.modal-dark .ex-label {
+	color: #8e8e93;
+}
+
+.ex-suggest {
+	display: flex;
+	flex-wrap: wrap;
+	margin-top: 12rpx;
+	margin-bottom: -12rpx;
+}
+
+.ex-suggest-chip {
+	padding: 8rpx 22rpx;
+	border-radius: 20rpx;
+	border: 1rpx solid #e5e5e5;
+	background: #fff;
+	color: #666;
+	font-size: 24rpx;
+	margin: 0 12rpx 12rpx 0;
+}
+
+.modal-dark .ex-suggest-chip {
+	background: #3a3a3c;
+	border-color: #48484a;
+	color: #a1a1a6;
+}
+
+.ex-suggest-chip.active {
+	background: rgba(76, 175, 80, 0.12);
+	border-color: $cal-event-exercise;
+	color: #388e3c;
+	font-weight: 600;
+}
+
+.modal-dark .ex-suggest-chip.active {
+	background: rgba(76, 175, 80, 0.22);
+	border-color: $cal-event-exercise;
+	color: #81c784;
+}
+
+.ex-suggest-empty {
+	display: block;
+	margin-top: 12rpx;
+	font-size: 22rpx;
+	color: #999;
+}
+
+.modal-dark .ex-suggest-empty {
+	color: #8e8e93;
+}
+
+.ex-metrics {
+	display: flex;
+	margin-bottom: 22rpx;
+}
+
+.ex-metric {
+	flex: 1;
+	min-width: 0;
+	margin-right: 16rpx;
+}
+
+.ex-metric:last-child {
+	margin-right: 0;
+}
+
+.ex-metric-box {
+	display: flex;
+	align-items: center;
+	height: 72rpx;
+	padding: 0 20rpx;
+	background: #fff;
+	border: 1rpx solid #e5e5e5;
+	border-radius: 16rpx;
+}
+
+.modal-dark .ex-metric-box {
+	background: #3a3a3c;
+	border-color: #48484a;
+}
+
+.ex-metric-input {
+	flex: 1;
+	min-width: 0;
+	height: 72rpx;
+	text-align: center;
+	font-size: 28rpx;
+	font-weight: 600;
+	color: #1a1a1a;
+}
+
+.modal-dark .ex-metric-input {
+	color: #e5e5e7;
+}
+
+.ex-metric-unit {
+	font-size: 22rpx;
+	color: #999;
+	margin-left: 4rpx;
+}
+
+.modal-dark .ex-metric-unit {
+	color: #8e8e93;
+}
+
+.ex-input-wrap {
+	display: flex;
+	align-items: center;
+	height: 72rpx;
+	background: #fff;
+	border: 1rpx solid #e5e5e5;
+	border-radius: 16rpx;
+	padding: 0 24rpx;
+}
+
+.modal-dark .ex-input-wrap {
+	background: #3a3a3c;
+	border-color: #48484a;
+}
+
+.ex-input {
+	flex: 1;
+	height: 72rpx;
+	font-size: 26rpx;
+	color: #1a1a1a;
+}
+
+.modal-dark .ex-input {
+	color: #e5e5e7;
+}
+
+.ex-placeholder {
+	color: #bbb;
+	font-size: 26rpx;
+}
+
+.modal-dark .ex-placeholder {
+	color: #636366;
+}
+
+.ex-submit {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 80rpx;
+	margin-top: 28rpx;
+	border-radius: 40rpx;
+	background: linear-gradient(135deg, $cal-event-exercise, #66bb6a);
+	color: #fff;
+	font-size: 28rpx;
+	font-weight: 600;
+	box-shadow: 0 10rpx 20rpx rgba(76, 175, 80, 0.2);
+}
+
+.ex-submit:active {
+	opacity: 0.85;
+}
+
+.ex-submit text {
+	margin-left: 10rpx;
 }
 
 /* ====== 输入行 ====== */

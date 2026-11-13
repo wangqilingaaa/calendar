@@ -28,7 +28,7 @@ calendar/
 │   └── weekly-meal/index.vue    # 本周餐计划：7 天 × 4 餐次 + 原材料清单
 ├── components/
 │   ├── app-icon/index.vue       # Remix Icon 封装（ICON_MAP 映射）
-│   ├── date-detail-modal/       # 日期详情弹窗：状态切换 + 事件增删 + 人物选择
+│   ├── date-detail-modal/       # 日期详情弹窗：状态切换 + 事件增删 + 人物选择 + 运动结构化录入
 │   ├── ai-input-modal/          # AI 文字输入、示例提示、解析结果确认
 │   ├── meal-detail-modal/       # 某天某餐次的菜单/原材料编辑
 │   └── trend-line-chart/        # 纯 view 绘制的折线图（体重趋势）
@@ -46,6 +46,8 @@ calendar/
 │   ├── auth.js                  # 用户信息与登录态（storage 持久化）
 │   ├── theme.js                 # 黑夜模式切换（storage key: app_theme）
 │   └── profile-theme.js         # 按用户性别返回资料主题类
+├── data/
+│   └── gym-actions.json         # 健身房动作库（联想列表 + 常用动作）
 ├── static/fonts/                # remixicon.css + woff2 字体
 ├── App.vue                      # 启动登录检查 + 全局 CSS 变量与主题类
 ├── main.js                      # Vue 实例化
@@ -87,6 +89,7 @@ App.vue (onLaunch 检查登录态)
   - 动态人物列表 = 自己 + 状态为 active 的绑定用户 + 共同（store/persons.js，按 id 去重）
   - `normalizePersonId` 兼容历史值（identity_tag / username / husband / wife / 名称）；`toPersonPayload` 转为接口提交值
 - **体重**：从 `weight` 事件的备注中解析 20–300 区间的数值，统计页按人物生成趋势点
+- **运动（健身房）**：日期弹窗选中「运动」时切换为健身房记录表单（动作联想输入 + 组数/次数/重量 + 备注），提交时拼接为 `动作 · N组×M次 · 重量kg · 备注`（重量、备注选填）写入 `event_remark`，后端仍只存这一个文本字段；动作联想库维护在 `data/gym-actions.json`
 
 ## 样式主题
 

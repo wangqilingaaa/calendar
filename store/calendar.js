@@ -132,15 +132,34 @@ export async function removeEvent(apiId) {
 	return deleteDiary(apiId);
 }
 
-/** 减少可计数事件 = 删除最新一条同类型日记 */
-export async function decrementEvent(year, month, day, eventTypeId) {
+/** 减少可计数事件 = 删除最新一条同类型、同备注、同人物的日记 */
+export async function decrementEvent(
+	year,
+	month,
+	day,
+	eventTypeId,
+	title,
+	personId,
+	persons = [],
+) {
 	const date = dateKey(year, month, day);
 	const typeName = typeNameById(eventTypeId);
 	const result = await queryDiaryByDay(date);
 	if (!result || !result.diaries) return;
 
 	const diaries = result.diaries
-		.filter((d) => d.event === typeName)
+		.filter((d) => {
+			if (d.event !== typeName) return false;
+			if (title && (d.event_remark || d.event) !== title) return false;
+			if (personId) {
+				const diaryPerson = normalizePersonIdForStats(
+					d.person || "both",
+					persons,
+				);
+				if (diaryPerson !== personId) return false;
+			}
+			return true;
+		})
 		.sort((a, b) => b.ID - a.ID); // 最新在前
 
 	if (diaries.length > 0) {
