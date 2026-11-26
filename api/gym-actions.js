@@ -7,7 +7,10 @@
  */
 import { get } from "./request.js";
 
-/** 按名称搜索健身动作；keyword 为空时返回常用动作 */
+/**
+ * 按名称搜索健身动作；keyword 为空时返回常用动作。
+ * 每项可能带 last_record（当前用户最近一次自主训练数据），供录入时带入组次/重量。
+ */
 export function searchGymActions(keyword = "", limit = 10) {
 	const params = { limit };
 	if (keyword) params.keyword = keyword;

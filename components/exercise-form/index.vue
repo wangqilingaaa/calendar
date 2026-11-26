@@ -7,8 +7,11 @@
 					placeholder-class="ex-placeholder" confirm-type="done" />
 			</view>
 			<view v-if="suggestions.length" class="ex-suggest">
-				<view v-for="name in suggestions" :key="name" class="ex-suggest-chip"
-					:class="{ active: actionKeyword === name }" @tap="action = name">{{ name }}</view>
+				<view v-for="item in suggestions" :key="item.name" class="ex-suggest-item"
+					:class="{ active: actionKeyword === item.name }" @tap="pickSuggestion(item)">
+					<text class="ex-suggest-name">{{ item.name }}</text>
+					<text v-if="item.last_record" class="ex-suggest-last">{{ lastRecordLabel(item.last_record) }}</text>
+				</view>
 			</view>
 			<text v-else-if="!searching" class="ex-suggest-empty">没有匹配动作，将直接使用自定义名称</text>
 		</view>
@@ -145,12 +148,35 @@ async function loadSuggestions(keyword) {
 	try {
 		const list = await searchGymActions(keyword, 6);
 		if (seq !== searchSeq) return;
-		suggestions.value = (list || []).map((item) => item.name);
+		suggestions.value = (list || []).map((item) => ({
+			name: item.name,
+			last_record: item.last_record || null,
+		}));
 	} catch (_) {
 		// 搜索失败时保留当前联想结果，不打断录入
 	} finally {
 		if (seq === searchSeq) searching.value = false;
 	}
+}
+
+// 「上次 11-22 · 4组×10次 · 60.5kg」；自重记录不展示 0kg
+function lastRecordLabel(record) {
+	const date = String(record.date || "").slice(5);
+	const weight = Number(record.weight);
+	const weightText = Number.isFinite(weight) && weight > 0 ? `${weight}kg` : "自重";
+	return `上次 ${date} · ${record.sets}组×${record.reps}次 · ${weightText}`;
+}
+
+// 点选动作时带入最近一次组次/重量；编辑已有记录时保留原值
+function pickSuggestion(item) {
+	action.value = item.name;
+	if (props.editing || !item.last_record) return;
+	const record = item.last_record;
+	sets.value = String(record.sets);
+	reps.value = String(record.reps);
+	const weightValue = Number(record.weight);
+	weight.value =
+		Number.isFinite(weightValue) && weightValue > 0 ? String(weightValue) : "";
 }
 
 watch(actionKeyword, (keyword) => {
@@ -244,39 +270,74 @@ defineExpose({ resetAfterAdd });
 }
 
 .ex-suggest {
-	display: flex;
-	flex-wrap: wrap;
 	margin-top: 12rpx;
-	margin-bottom: -12rpx;
-}
-
-.ex-suggest-chip {
-	padding: 8rpx 22rpx;
-	border-radius: 20rpx;
 	border: 1rpx solid #e5e5e5;
-	background: #fff;
-	color: #666;
-	font-size: 24rpx;
-	margin: 0 12rpx 12rpx 0;
+	border-radius: 16rpx;
+	overflow: hidden;
 }
 
-.exercise-form-dark .ex-suggest-chip {
-	background: #3a3a3c;
+.exercise-form-dark .ex-suggest {
 	border-color: #48484a;
-	color: #a1a1a6;
 }
 
-.ex-suggest-chip.active {
+.ex-suggest-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 16rpx 24rpx;
+	background: #fff;
+	border-bottom: 1rpx solid #f0f0f0;
+}
+
+.ex-suggest-item:last-child {
+	border-bottom: none;
+}
+
+.exercise-form-dark .ex-suggest-item {
+	background: #3a3a3c;
+	border-bottom-color: #48484a;
+}
+
+.ex-suggest-item.active {
 	background: rgba(76, 175, 80, 0.12);
-	border-color: $cal-event-exercise;
+}
+
+.exercise-form-dark .ex-suggest-item.active {
+	background: rgba(76, 175, 80, 0.22);
+}
+
+.ex-suggest-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 26rpx;
+	color: #333;
+}
+
+.exercise-form-dark .ex-suggest-name {
+	color: #e5e5e7;
+}
+
+.ex-suggest-item.active .ex-suggest-name {
 	color: #388e3c;
 	font-weight: 600;
 }
 
-.exercise-form-dark .ex-suggest-chip.active {
-	background: rgba(76, 175, 80, 0.22);
-	border-color: $cal-event-exercise;
+.exercise-form-dark .ex-suggest-item.active .ex-suggest-name {
 	color: #81c784;
+}
+
+.ex-suggest-last {
+	flex-shrink: 0;
+	margin-left: 16rpx;
+	font-size: 22rpx;
+	color: #999;
+}
+
+.exercise-form-dark .ex-suggest-last {
+	color: #8e8e93;
 }
 
 .ex-suggest-empty {
