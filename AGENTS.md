@@ -55,7 +55,7 @@ calendar/
 ├── App.vue                      # 启动登录检查 + 全局 CSS 变量与主题类
 ├── main.js                      # Vue 实例化
 ├── pages.json                   # 页面路由（首项为 login，其余页面 custom 导航栏）
-├── manifest.json                # 应用配置与版本号（versionName 1.2.1）
+├── manifest.json                # 应用配置与版本号（H5 发版时自动 patch+1）
 └── uni.scss                     # SCSS 变量（uni 官方 + 日历自定义）
 ```
 
@@ -77,6 +77,7 @@ H5 站点部署在服务器 `/var/www/calendar`，由 nginx `calendar-923.conf` 
   - `--dry-run`：只构建/上传/解压校验，不改线上目录
   - `--skip-build`：跳过构建，发布现有 `unpackage/dist/build/web`
 - 脚本使用 HBuilderX 内置 uni-app 编译器无界面构建 H5，经 workbench CLI 上传，备份线上目录到 `/var/www/calendar.bak-<时间戳>` 后原子切换，并做 HTTP 200 健康检查
+- 每次发版构建前自动递增 `manifest.json` 的 `versionName`（patch+1）与 `versionCode`（+1），发布后需提交该文件
 - app 端（Android/iOS）与小程序由开发者自行打包，不走该脚本
 
 ## 架构
@@ -193,7 +194,7 @@ App.vue (onLaunch 检查登录态)
 ## Notes
 
 - 项目暂未接入任何 CI / 测试框架 / 状态管理库
-- **版本号**: `manifest.json` 的 `versionName` / `versionCode`，发版前同步更新
+- **版本号**: `manifest.json` 的 `versionName` / `versionCode`，每次发版必须更新；`scripts/release-h5.sh` 构建前自动 patch+1
 - **appid**: 微信小程序 appid 为 `wx91ec11812be402b2`，已配置在 manifest.json，切换环境时注意检查
 - **后端地址**: 统一在 `api/config.js` 修改 `API_BASE`（当前为生产 IP），本地开发改用注释中的地址
 - **图标系统**: 使用 Remix Icon v4.6.0，通过 `components/app-icon` 组件封装（`ICON_MAP` 映射），禁止引入 emoji 或自定义 SVG；新增图标先在 ICON_MAP 中注册

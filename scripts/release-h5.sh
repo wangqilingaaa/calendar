@@ -63,6 +63,27 @@ if [ "$SKIP_BUILD" = false ]; then
 			"$HBX_APP/Contents/Info.plist" 2>/dev/null || echo 5.34
 	)}"
 
+	# 发版必升版本号：versionName patch+1，versionCode+1
+	MANIFEST="$ROOT_DIR/manifest.json"
+	[ -f "$MANIFEST" ] || fail "未找到 manifest.json: $MANIFEST"
+	CUR_NAME="$(sed -n 's/.*"versionName"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$MANIFEST" | head -1)"
+	CUR_CODE="$(sed -n -E 's/.*"versionCode"[[:space:]]*:[[:space:]]*"?([0-9]+)"?.*/\1/p' "$MANIFEST" | head -1)"
+	[ -n "$CUR_NAME" ] || fail "manifest.json 缺少 versionName"
+	[ -n "$CUR_CODE" ] || fail "manifest.json 缺少 versionCode"
+	CUR_PATCH="${CUR_NAME##*.}"
+	case "$CUR_PATCH" in
+		'' | *[!0-9]*)
+			fail "versionName 格式不支持: $CUR_NAME（需 x.y.z）"
+			;;
+	esac
+	NEW_NAME="${CUR_NAME%.*}.$((CUR_PATCH + 1))"
+	NEW_CODE=$((CUR_CODE + 1))
+	sed -i '' -E "s/\"versionName\"([[:space:]]*:[[:space:]]*)\"[^\"]*\"/\"versionName\"\1\"$NEW_NAME\"/" "$MANIFEST"
+	sed -i '' -E "s/\"versionCode\"([[:space:]]*:[[:space:]]*)\"?[0-9]+\"?/\"versionCode\"\1\"$NEW_CODE\"/" "$MANIFEST"
+	grep -q "\"versionName\" *: *\"$NEW_NAME\"" "$MANIFEST" || fail "versionName 更新失败"
+	grep -q "\"versionCode\" *: *\"$NEW_CODE\"" "$MANIFEST" || fail "versionCode 更新失败"
+	log "版本号: $CUR_NAME → $NEW_NAME（versionCode $CUR_CODE → $NEW_CODE），发布后记得提交 manifest.json"
+
 	log "构建 H5 生产包..."
 	(
 		cd "$HBX_CLI_DIR"
@@ -77,7 +98,7 @@ if [ "$SKIP_BUILD" = false ]; then
 			"$HBX_NODE" node_modules/@dcloudio/vite-plugin-uni/bin/uni.js build
 	)
 else
-	log "跳过构建，使用现有产物"
+	log "跳过构建，使用现有产物（版本号不变）"
 fi
 
 [ -f "$BUILD_DIR/index.html" ] || fail "构建产物不存在: $BUILD_DIR/index.html"
