@@ -7,10 +7,18 @@
 					placeholder-class="ex-placeholder" confirm-type="done" />
 			</view>
 			<view v-if="suggestions.length" class="ex-suggest">
-				<view v-for="item in suggestions" :key="item.name" class="ex-suggest-item"
-					:class="{ active: actionKeyword === item.name }" @tap="pickSuggestion(item)">
-					<text class="ex-suggest-name">{{ item.name }}</text>
-					<text v-if="item.last_record" class="ex-suggest-last">{{ lastRecordLabel(item.last_record) }}</text>
+				<view v-if="historySuggestions.length" class="ex-suggest-list">
+					<view v-for="item in historySuggestions" :key="item.name" class="ex-suggest-item"
+						:class="{ active: actionKeyword === item.name }" @tap="pickSuggestion(item)">
+						<text class="ex-suggest-name">{{ item.name }}</text>
+						<text class="ex-suggest-last">{{ lastRecordLabel(item.last_record) }}</text>
+					</view>
+				</view>
+				<view v-if="tagSuggestions.length" class="ex-suggest-tags">
+					<view v-for="item in tagSuggestions" :key="item.name" class="ex-suggest-chip"
+						:class="{ active: actionKeyword === item.name }" @tap="pickSuggestion(item)">
+						{{ item.name }}
+					</view>
 				</view>
 			</view>
 			<text v-else-if="!searching" class="ex-suggest-empty">没有匹配动作，将直接使用自定义名称</text>
@@ -142,6 +150,10 @@ const searching = ref(false);
 let searchTimer = null;
 let searchSeq = 0;
 
+// 无历史的动作按 tag 平铺，有上次训练记录的才占一整行展示详情
+const tagSuggestions = computed(() => suggestions.value.filter((item) => !item.last_record));
+const historySuggestions = computed(() => suggestions.value.filter((item) => item.last_record));
+
 async function loadSuggestions(keyword) {
 	const seq = ++searchSeq;
 	searching.value = true;
@@ -269,14 +281,50 @@ defineExpose({ resetAfterAdd });
 	color: #8e8e93;
 }
 
-.ex-suggest {
+.ex-suggest-tags {
+	display: flex;
+	flex-wrap: wrap;
+	margin-top: 12rpx;
+	margin-bottom: -12rpx;
+}
+
+.ex-suggest-chip {
+	padding: 8rpx 22rpx;
+	border-radius: 20rpx;
+	border: 1rpx solid #e5e5e5;
+	background: #fff;
+	color: #666;
+	font-size: 24rpx;
+	margin: 0 12rpx 12rpx 0;
+}
+
+.exercise-form-dark .ex-suggest-chip {
+	background: #3a3a3c;
+	border-color: #48484a;
+	color: #a1a1a6;
+}
+
+.ex-suggest-chip.active {
+	background: rgba(76, 175, 80, 0.12);
+	border-color: $cal-event-exercise;
+	color: #388e3c;
+	font-weight: 600;
+}
+
+.exercise-form-dark .ex-suggest-chip.active {
+	background: rgba(76, 175, 80, 0.22);
+	border-color: $cal-event-exercise;
+	color: #81c784;
+}
+
+.ex-suggest-list {
 	margin-top: 12rpx;
 	border: 1rpx solid #e5e5e5;
 	border-radius: 16rpx;
 	overflow: hidden;
 }
 
-.exercise-form-dark .ex-suggest {
+.exercise-form-dark .ex-suggest-list {
 	border-color: #48484a;
 }
 
