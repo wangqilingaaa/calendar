@@ -38,7 +38,7 @@
 					<text v-if="!events.length" class="muted">— 空</text>
 				</view>
 				<view v-if="events.length" class="event-list">
-					<view v-for="item in eventViews" :key="item.ev.id" class="event-item">
+					<view v-for="item in eventViews" :key="item.ev.source + '-' + item.ev.id" class="event-item">
 						<view class="ev-left">
 							<app-icon :name="item.ev.type" :size="36" :color="typeColor(item.ev.type)" />
 							<view class="ev-info">
@@ -75,7 +75,7 @@
 							<view class="ev-edit" @tap.stop="startEdit(item.ev)">
 								<app-icon name="edit" :size="32" :color="isDark ? '#8e8e93' : '#999'" />
 							</view>
-							<text class="del-btn" @tap.stop="delEvent(item.ev.id)">x</text>
+							<text class="del-btn" @tap.stop="delEvent(item.ev)">x</text>
 						</view>
 					</view>
 				</view>
@@ -91,7 +91,7 @@
 
 				<!-- 编辑时可跨天修改日期 -->
 				<view v-if="editingEvent" class="edit-date-row">
-					<text class="ex-label">日期</text>
+					<text class="edit-date-label">日期</text>
 					<picker class="edit-date-picker" mode="date" :value="editDate" @change="onEditDateChange">
 						<view class="edit-date-box">
 							<text class="edit-date-text">{{ editDate }}</text>
@@ -117,8 +117,8 @@
 					</view>
 				</view>
 
-				<!-- 类型选择 -->
-				<scroll-view scroll-x class="type-scroll" :show-scrollbar="false">
+				<!-- 类型选择（结构化健身记录编辑时类型固定为运动，不允许切换） -->
+				<scroll-view v-if="!isGymEditing" scroll-x class="type-scroll" :show-scrollbar="false">
 					<view class="type-row">
 						<view v-for="t in types" :key="t.id" class="type-chip" :class="{ active: addType === t.id }" :style="addType === t.id ? { borderColor: t.color } : {}
 							" @tap="addType = t.id">
@@ -131,69 +131,18 @@
 					</view>
 				</scroll-view>
 
-				<!-- 运动记录：健身房场景，动作联想 + 组次 + 重量 -->
-				<view v-if="isExercise" class="exercise-form">
-					<view class="ex-field">
-						<text class="ex-label">动作</text>
-						<view class="ex-input-wrap">
-							<input class="ex-input" v-model="exerciseAction" placeholder="输入或选择动作，如 卧推、深蹲"
-								placeholder-class="ex-placeholder" confirm-type="done" />
-						</view>
-						<view v-if="gymSuggestions.length" class="ex-suggest">
-							<view v-for="name in gymSuggestions" :key="name" class="ex-suggest-chip"
-								:class="{ active: exerciseActionKeyword === name }" @tap="exerciseAction = name">{{ name }}</view>
-						</view>
-						<text v-else class="ex-suggest-empty">没有匹配动作，将直接使用自定义名称</text>
+				<!-- 类型专属录入表单（如运动）；未注册的类型走默认单行输入 -->
+				<component v-if="activeTypeForm" :is="activeTypeForm" ref="typeFormRef" :key="typeFormKey"
+					:initial-title="typeFormDraft" :initial="typeFormInitial" :editing="Boolean(editingEvent)" :dark="isDark"
+					@submit="handleTypeFormSubmit" />
+				<template v-else>
+					<view class="add-bar">
+						<input class="add-input" v-model="addTitle" :placeholder="addPlaceholder" confirm-type="done"
+							@confirm="doAdd" />
+						<text v-if="!editingEvent" class="add-btn" @tap="doAdd">+</text>
 					</view>
-
-					<view class="ex-metrics">
-						<view class="ex-metric">
-							<text class="ex-label">组数</text>
-							<view class="ex-metric-box">
-								<input class="ex-metric-input" type="number" v-model="exerciseSets" :maxlength="2"
-									confirm-type="done" />
-								<text class="ex-metric-unit">组</text>
-							</view>
-						</view>
-						<view class="ex-metric">
-							<text class="ex-label">次数</text>
-							<view class="ex-metric-box">
-								<input class="ex-metric-input" type="number" v-model="exerciseReps" :maxlength="3"
-									confirm-type="done" />
-								<text class="ex-metric-unit">次</text>
-							</view>
-						</view>
-						<view class="ex-metric">
-							<text class="ex-label">重量</text>
-							<view class="ex-metric-box">
-								<input class="ex-metric-input" type="digit" v-model="exerciseWeight" placeholder="选填"
-									placeholder-class="ex-placeholder" confirm-type="done" />
-								<text class="ex-metric-unit">kg</text>
-							</view>
-						</view>
-					</view>
-
-					<view class="ex-field">
-						<text class="ex-label">备注</text>
-						<view class="ex-input-wrap">
-							<input class="ex-input" v-model="addTitle" placeholder="选填，如 第一个动作、状态不错"
-								placeholder-class="ex-placeholder" confirm-type="done" @confirm="doAdd" />
-						</view>
-					</view>
-
-					<view class="ex-submit" @tap="doAdd">
-						<app-icon name="exercise" :size="32" color="#fff" />
-						<text>{{ editingEvent ? "保存修改" : "添加健身记录" }}</text>
-					</view>
-				</view>
-
-				<!-- 其他类型：保持单行备注输入 -->
-				<view v-else class="add-bar">
-					<input class="add-input" v-model="addTitle" :placeholder="addPlaceholder" confirm-type="done"
-						@confirm="doAdd" />
-					<text v-if="!editingEvent" class="add-btn" @tap="doAdd">+</text>
-				</view>
-				<view v-if="editingEvent && !isExercise" class="edit-submit" @tap="doAdd">保存修改</view>
+					<view v-if="editingEvent" class="edit-submit" @tap="doAdd">保存修改</view>
+				</template>
 			</view>
 
 			<!-- 底部 -->
@@ -226,8 +175,13 @@ import {
 import { getTheme } from "@/store/theme.js";
 import { getUser } from "@/store/auth.js";
 import AppIcon from "@/components/app-icon/index.vue";
-import gymActionData from "@/data/gym-actions.json";
-import { parseExerciseTitle, formatExerciseTitle } from "@/utils/exercise.js";
+import ExerciseForm from "@/components/exercise-form/index.vue";
+import {
+	createGymRecord,
+	updateGymRecord,
+	deleteGymRecord,
+} from "@/api/gym-records.js";
+import { parseExerciseTitle } from "@/utils/exercise.js";
 import { putDiaryStatus } from "../../api/diary";
 
 const props = defineProps({
@@ -281,32 +235,52 @@ const me = getUser();
 const myPersonId = (me && me.id) || "both";
 const addPerson = ref(myPersonId);
 
-// 健身房动作库维护在 data/gym-actions.json，输入时用于联想，也允许自定义名称
-const GYM_ACTIONS = gymActionData.actions || [];
-const POPULAR_GYM_ACTIONS = gymActionData.popular || [];
-const exerciseAction = ref("");
-const exerciseSets = ref("4");
-const exerciseReps = ref("10");
-const exerciseWeight = ref("");
+// 事件类型 → 专属录入表单组件。
+// 新增模块表单时只需在此注册（组件内自行校验并 emit submit），弹窗模板无需改动。
+const TYPE_FORM_COMPONENTS = {
+	exercise: ExerciseForm,
+};
 
-const isExercise = computed(() => addType.value === "exercise");
+const activeTypeForm = computed(() => TYPE_FORM_COMPONENTS[addType.value] || null);
 
-const exerciseActionKeyword = computed(() => exerciseAction.value.trim());
+// 结构化健身记录的类型固定为运动，编辑时隐藏类型切换，避免改走日记接口
+const isGymEditing = computed(
+	() => Boolean(editingEvent.value) && editingEvent.value.source === "gym",
+);
 
-const gymSuggestions = computed(() => {
-	const keyword = exerciseActionKeyword.value;
-	if (!keyword) return POPULAR_GYM_ACTIONS;
-	return GYM_ACTIONS.filter((name) => name.includes(keyword)).slice(0, 6);
-});
+// 专属表单的编辑回填数据；编辑对象或类型变化时通过 key 重建表单
+const typeFormDraft = ref("");
+const typeFormInitial = ref(null);
+const typeFormRef = ref(null);
+const typeFormKey = computed(() =>
+	editingEvent.value
+		? `${addType.value}:${editingEvent.value.id}`
+		: `${addType.value}:new`,
+);
 
 const weekdayLabel = computed(() => {
 	const date = new Date(props.year, props.month, props.day);
 	return "周" + ["日", "一", "二", "三", "四", "五", "六"][date.getDay()];
 });
 
-// 运动记录的备注是单一文本字段，列表展示时拆成「动作 + 组次/重量 + 备注」
+// 运动记录展示：结构化健身记录直接读取字段，旧版运动日记从备注文本解析
 const eventViews = computed(() =>
 	events.value.map((ev) => {
+		if (ev.source === "gym") {
+			const metrics = [
+				`${ev.sets}组×${ev.reps}次`,
+				Number(ev.weight) > 0 ? `${ev.weight}kg` : "",
+			]
+				.filter(Boolean)
+				.join(" · ");
+			return {
+				ev,
+				title: ev.action || typeName(ev.type),
+				metrics,
+				note: ev.note || "",
+			};
+		}
+
 		const parsed =
 			ev.type === "exercise" ? parseExerciseTitle(ev.title) : null;
 		const info = parsed && (parsed.hasMetrics || parsed.weight) ? parsed : null;
@@ -346,6 +320,15 @@ function updateEvents() {
 			event.person || "both",
 			persons.value,
 		);
+		// 结构化健身记录每条独立展示，不参与同类合并与加减计数
+		if (event.source === "gym") {
+			merged.push({
+				...event,
+				person: personId,
+				count: 0,
+			});
+			return;
+		}
 		if (type && type.countable) {
 			const key = event.type + "|" + personId + "|" + event.title;
 			if (typeMap[key]) {
@@ -410,14 +393,8 @@ function resetAddForm() {
 	addType.value = "water";
 	addPerson.value = myPersonId;
 	editDate.value = "";
-	resetExerciseForm();
-}
-
-function resetExerciseForm() {
-	exerciseAction.value = "";
-	exerciseSets.value = "4";
-	exerciseReps.value = "10";
-	exerciseWeight.value = "";
+	typeFormDraft.value = "";
+	typeFormInitial.value = null;
 }
 
 function cancelEdit() {
@@ -426,28 +403,30 @@ function cancelEdit() {
 	resetAddForm();
 }
 
-// 编辑回填：普通事件回填备注，运动事件尝试解析「动作 · N组×M次 · Xkg · 备注」
+// 编辑回填：结构化健身记录直接回填字段；旧版运动日记解析备注文本
 function startEdit(event) {
 	editingEvent.value = event;
 	editDate.value = dateKey(props.year, props.month, props.day);
 	addPerson.value = normalizePersonId(event.person || "both", persons.value);
 	addType.value = event.type;
 	addTitle.value = "";
-	resetExerciseForm();
+	typeFormDraft.value = "";
+	typeFormInitial.value = null;
 
 	const title = event.title || "";
 	const type = types.find((item) => item.id === event.type);
 
-	if (event.type === "exercise") {
-		const parsed = parseExerciseTitle(title);
-		if (parsed) {
-			exerciseAction.value = parsed.action;
-			if (parsed.hasMetrics) {
-				exerciseSets.value = parsed.sets;
-				exerciseReps.value = parsed.reps;
-			}
-			exerciseWeight.value = parsed.weight;
-			addTitle.value = parsed.note;
+	if (TYPE_FORM_COMPONENTS[event.type]) {
+		if (event.source === "gym") {
+			typeFormInitial.value = {
+				action: event.action || "",
+				sets: event.sets,
+				reps: event.reps,
+				weight: event.weight,
+				note: event.note || "",
+			};
+		} else {
+			typeFormDraft.value = title;
 		}
 		return;
 	}
@@ -462,52 +441,103 @@ function onEditDateChange(event) {
 	editDate.value = event.detail.value;
 }
 
-// 把结构化输入拼成一条可读备注，后端仍只存 event_remark 一个字段
-// 例如：卧推 · 4组×10次 · 60kg · 状态不错
-function buildExerciseTitle(sets, reps, weight) {
-	return formatExerciseTitle({
-		action: exerciseActionKeyword.value,
-		sets,
-		reps,
-		weight:
-			Number.isFinite(weight) && weight > 0
-				? Number(weight.toFixed(2))
-				: "",
-		note: addTitle.value.trim(),
-	});
-}
-
 async function doAdd() {
 	if (!addType.value || saving.value) return;
 	const type = types.find((item) => item.id === addType.value);
-	let title = "";
+	const title = addTitle.value.trim() || (type ? type.name : "");
+	if (await saveEvent(title)) addTitle.value = "";
+}
 
-	if (isExercise.value) {
-		if (!exerciseActionKeyword.value) {
-			uni.showToast({ title: "请输入动作名称", icon: "none" });
-			return;
-		}
-		const sets = parseInt(exerciseSets.value, 10);
-		if (!sets || sets <= 0) {
-			uni.showToast({ title: "请填写组数", icon: "none" });
-			return;
-		}
-		const reps = parseInt(exerciseReps.value, 10);
-		if (!reps || reps <= 0) {
-			uni.showToast({ title: "请填写次数", icon: "none" });
-			return;
-		}
-		const weightText = exerciseWeight.value.trim();
-		const weight = parseFloat(weightText);
-		if (weightText && (!Number.isFinite(weight) || weight <= 0)) {
-			uni.showToast({ title: "重量填写有误", icon: "none" });
-			return;
-		}
-		title = buildExerciseTitle(sets, reps, weight);
+// 专属表单提交：校验与字段整理由表单组件完成，弹窗负责按记录来源分流落库
+async function handleTypeFormSubmit(payload) {
+	if (saving.value) return;
+	const wasEditing = Boolean(editingEvent.value);
+	const isGymEvent =
+		wasEditing && editingEvent.value.source === "gym";
+
+	if (!wasEditing || isGymEvent) {
+		// 新增运动记录与结构化记录编辑统一走健身记录接口
+		if (!(await saveGymRecord(payload, isGymEvent))) return;
 	} else {
-		title = addTitle.value.trim() || (type ? type.name : "");
+		// 旧版运动日记事件沿用文本备注回写日记
+		if (!(await saveEvent(payload.title))) return;
 	}
 
+	// 新增后保留组次，便于连续记录下一个动作
+	const formRef = typeFormRef.value;
+	if (!wasEditing && formRef && typeof formRef.resetAfterAdd === "function") {
+		formRef.resetAfterAdd();
+	}
+}
+
+// 健身记录的新增 / 编辑入口；返回 false 表示保存失败或无需提交
+async function saveGymRecord(payload, isEditing) {
+	const personId = normalizePersonId(addPerson.value, persons.value);
+	const personPayload = toPersonPayload(personId, persons.value);
+	const todayKey = dateKey(props.year, props.month, props.day);
+	const recordDate = editDate.value || todayKey;
+	const weightValue = Number(payload.weight);
+	const body = {
+		date: recordDate,
+		person: personPayload,
+		action: payload.action,
+		sets: Number(payload.sets),
+		reps: Number(payload.reps),
+		weight:
+			Number.isFinite(weightValue) && weightValue > 0 ? weightValue : 0,
+		note: payload.note || "",
+	};
+
+	if (isEditing) {
+		const original = editingEvent.value;
+		// 没有任何修改时直接退出编辑，避免无谓请求
+		if (
+			original.action === body.action &&
+			original.person === personId &&
+			Number(original.sets) === body.sets &&
+			Number(original.reps) === body.reps &&
+			Number(original.weight || 0) === body.weight &&
+			(original.note || "") === body.note &&
+			recordDate === todayKey
+		) {
+			cancelEdit();
+			return false;
+		}
+
+		saving.value = true;
+		try {
+			await updateGymRecord(original.id, body);
+		} catch (_) {
+			// 请求层已提示错误，保留编辑态方便重试
+			return false;
+		} finally {
+			saving.value = false;
+		}
+
+		const movedDate = recordDate !== todayKey;
+		editingEvent.value = null;
+		resetAddForm();
+		if (movedDate) {
+			uni.showToast({ title: "已移动到所选日期", icon: "none" });
+		}
+		emit("refresh");
+		return true;
+	}
+
+	saving.value = true;
+	try {
+		await createGymRecord(body);
+	} catch (_) {
+		return false;
+	} finally {
+		saving.value = false;
+	}
+	emit("refresh");
+	return true;
+}
+
+// 新增 / 编辑共用的保存入口；返回 false 表示保存失败或无需提交
+async function saveEvent(title) {
 	const personId = normalizePersonId(addPerson.value, persons.value);
 	const personPayload = toPersonPayload(personId, persons.value);
 
@@ -521,7 +551,7 @@ async function doAdd() {
 			editDate.value === dateKey(props.year, props.month, props.day)
 		) {
 			cancelEdit();
-			return;
+			return false;
 		}
 
 		const movedDate =
@@ -538,7 +568,7 @@ async function doAdd() {
 			);
 		} catch (_) {
 			// 请求层已提示错误，保留编辑态方便重试
-			return;
+			return false;
 		} finally {
 			saving.value = false;
 		}
@@ -549,7 +579,7 @@ async function doAdd() {
 			uni.showToast({ title: "已移动到所选日期", icon: "none" });
 		}
 		emit("refresh");
-		return;
+		return true;
 	}
 
 	saving.value = true;
@@ -563,17 +593,12 @@ async function doAdd() {
 			personPayload,
 		);
 	} catch (_) {
-		return;
+		return false;
 	} finally {
 		saving.value = false;
 	}
-	addTitle.value = "";
-	// 保留组次便于连续记录下一个动作，动作和重量需要重新填写
-	if (isExercise.value) {
-		exerciseAction.value = "";
-		exerciseWeight.value = "";
-	}
 	emit("refresh");
+	return true;
 }
 
 async function incEvent(event) {
@@ -591,6 +616,11 @@ async function incEvent(event) {
 }
 
 async function decEvent(event) {
+	if (event.source === "gym") {
+		await deleteGymRecord(event.id);
+		emit("refresh");
+		return;
+	}
 	// 同一天可能有多种运动记录，需要带上备注和人物才能精确减少对应那一行
 	await decrementEvent(
 		props.year,
@@ -604,8 +634,12 @@ async function decEvent(event) {
 	emit("refresh");
 }
 
-async function delEvent(id) {
-	await removeEvent(id);
+async function delEvent(event) {
+	if (event.source === "gym") {
+		await deleteGymRecord(event.id);
+	} else {
+		await removeEvent(event.id);
+	}
 	emit("refresh");
 }
 
@@ -1045,6 +1079,17 @@ function formatTime(time) {
 	margin-bottom: 20rpx;
 }
 
+.edit-date-label {
+	display: block;
+	font-size: 22rpx;
+	color: #999;
+	margin-bottom: 12rpx;
+}
+
+.modal-dark .edit-date-label {
+	color: #8e8e93;
+}
+
 .edit-date-picker {
 	display: block;
 }
@@ -1084,196 +1129,23 @@ function formatTime(time) {
 	color: #8e8e93;
 }
 
-/* ====== 运动表单 ====== */
-.exercise-form {
-	background: #f8f8f8;
-	border-radius: 20rpx;
-	padding: 24rpx;
-}
-
-.modal-dark .exercise-form {
-	background: #2c2c2e;
-}
-
-.ex-field {
-	margin-bottom: 22rpx;
-}
-
-.ex-label {
-	display: block;
-	font-size: 22rpx;
-	color: #999;
-	margin-bottom: 12rpx;
-}
-
-.modal-dark .ex-label {
-	color: #8e8e93;
-}
-
-.ex-suggest {
-	display: flex;
-	flex-wrap: wrap;
-	margin-top: 12rpx;
-	margin-bottom: -12rpx;
-}
-
-.ex-suggest-chip {
-	padding: 8rpx 22rpx;
-	border-radius: 20rpx;
-	border: 1rpx solid #e5e5e5;
-	background: #fff;
-	color: #666;
-	font-size: 24rpx;
-	margin: 0 12rpx 12rpx 0;
-}
-
-.modal-dark .ex-suggest-chip {
-	background: #3a3a3c;
-	border-color: #48484a;
-	color: #a1a1a6;
-}
-
-.ex-suggest-chip.active {
-	background: rgba(76, 175, 80, 0.12);
-	border-color: $cal-event-exercise;
-	color: #388e3c;
-	font-weight: 600;
-}
-
-.modal-dark .ex-suggest-chip.active {
-	background: rgba(76, 175, 80, 0.22);
-	border-color: $cal-event-exercise;
-	color: #81c784;
-}
-
-.ex-suggest-empty {
-	display: block;
-	margin-top: 12rpx;
-	font-size: 22rpx;
-	color: #999;
-}
-
-.modal-dark .ex-suggest-empty {
-	color: #8e8e93;
-}
-
-.ex-metrics {
-	display: flex;
-	margin-bottom: 22rpx;
-}
-
-.ex-metric {
-	flex: 1;
-	min-width: 0;
-	margin-right: 16rpx;
-}
-
-.ex-metric:last-child {
-	margin-right: 0;
-}
-
-.ex-metric-box {
-	display: flex;
-	align-items: center;
-	height: 72rpx;
-	padding: 0 20rpx;
-	background: #fff;
-	border: 1rpx solid #e5e5e5;
-	border-radius: 16rpx;
-}
-
-.modal-dark .ex-metric-box {
-	background: #3a3a3c;
-	border-color: #48484a;
-}
-
-.ex-metric-input {
-	flex: 1;
-	min-width: 0;
-	height: 72rpx;
-	text-align: center;
-	font-size: 28rpx;
-	font-weight: 600;
-	color: #1a1a1a;
-}
-
-.modal-dark .ex-metric-input {
-	color: #e5e5e7;
-}
-
-.ex-metric-unit {
-	font-size: 22rpx;
-	color: #999;
-	margin-left: 4rpx;
-}
-
-.modal-dark .ex-metric-unit {
-	color: #8e8e93;
-}
-
-.ex-input-wrap {
-	display: flex;
-	align-items: center;
-	height: 72rpx;
-	background: #fff;
-	border: 1rpx solid #e5e5e5;
-	border-radius: 16rpx;
-	padding: 0 24rpx;
-}
-
-.modal-dark .ex-input-wrap {
-	background: #3a3a3c;
-	border-color: #48484a;
-}
-
-.ex-input {
-	flex: 1;
-	height: 72rpx;
-	font-size: 26rpx;
-	color: #1a1a1a;
-}
-
-.modal-dark .ex-input {
-	color: #e5e5e7;
-}
-
-.ex-placeholder {
-	color: #bbb;
-	font-size: 26rpx;
-}
-
-.modal-dark .ex-placeholder {
-	color: #636366;
-}
-
-.ex-submit,
+/* ====== 编辑保存按钮 ====== */
 .edit-submit {
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	height: 80rpx;
-	margin-top: 28rpx;
+	margin-top: 20rpx;
 	border-radius: 40rpx;
-	background: linear-gradient(135deg, $cal-event-exercise, #66bb6a);
+	background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
 	color: #fff;
 	font-size: 28rpx;
 	font-weight: 600;
-	box-shadow: 0 10rpx 20rpx rgba(76, 175, 80, 0.2);
-}
-
-.edit-submit {
-	margin-top: 20rpx;
-	background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
 	box-shadow: 0 10rpx 20rpx var(--theme-ring);
 }
 
-.ex-submit:active,
 .edit-submit:active {
 	opacity: 0.85;
-}
-
-.ex-submit text {
-	margin-left: 10rpx;
 }
 
 /* ====== 输入行 ====== */

@@ -76,10 +76,10 @@ function handleUnauthorized() {
  * @param {string} method  GET|POST|DELETE
  * @param {string} url     路径，如 "/diary"
  * @param {object} data    body（GET 时转为 query params）
- * @param {object} options 额外选项 { needAuth, showLoading }
+ * @param {object} options 额外选项 { needAuth, showLoading, silent }
  */
 export function request(method, url, data = {}, options = {}) {
-	const { needAuth = true, showLoading = false } = options;
+	const { needAuth = true, showLoading = false, silent = false } = options;
 
 	const fullUrl = API_BASE + url;
 
@@ -128,7 +128,7 @@ export function request(method, url, data = {}, options = {}) {
 				} else {
 					const msg = (body && body.message) || "请求失败";
 					console.warn(`[API] 业务错误: ${msg}`);
-					uni.showToast({ title: msg, icon: "none" });
+					if (!silent) uni.showToast({ title: msg, icon: "none" });
 					reject(new Error(msg));
 				}
 			},
@@ -138,11 +138,13 @@ export function request(method, url, data = {}, options = {}) {
 					`[API] ${method} ${fullUrl} 网络错误:`,
 					JSON.stringify(err),
 				);
-				uni.showToast({
-					title: "网络异常 " + (err.errMsg || ""),
-					icon: "none",
-					duration: 3000,
-				});
+				if (!silent) {
+					uni.showToast({
+						title: "网络异常 " + (err.errMsg || ""),
+						icon: "none",
+						duration: 3000,
+					});
+				}
 				reject(err);
 			},
 		});

@@ -28,7 +28,8 @@ calendar/
 │   └── weekly-meal/index.vue    # 本周餐计划：7 天 × 4 餐次 + 原材料清单
 ├── components/
 │   ├── app-icon/index.vue       # Remix Icon 封装（ICON_MAP 映射）
-│   ├── date-detail-modal/       # 日期详情弹窗：状态切换 + 事件增删改 + 人物选择 + 运动结构化录入
+│   ├── date-detail-modal/       # 日期详情弹窗：状态切换 + 事件增删改 + 人物选择 + 类型专属表单调度
+│   ├── exercise-form/           # 运动（健身房）录入表单：动作联想 + 组次/重量/备注，校验后 emit submit
 │   ├── ai-input-modal/          # AI 文字输入、示例提示、解析结果确认
 │   ├── meal-detail-modal/       # 某天某餐次的菜单/原材料编辑
 │   └── trend-line-chart/        # 纯 view 绘制的折线图（体重趋势）
@@ -39,6 +40,8 @@ calendar/
 │   ├── binding.js               # 伴侣绑定：查询/申请/同意/解绑
 │   ├── diary.js                 # 日记 CRUD、按天/月查询、状态更新
 │   ├── meal-plan.js             # 周计划、食谱条目、原材料
+│   ├── gym-actions.js           # 健身动作搜索（新动作由健身记录接口自动入库）
+│   ├── gym-records.js           # 健身训练记录 CRUD（结构化组次/重量）
 │   └── ai.js                    # 后端 AI 解析/示例生成 + 微信语音识别
 ├── store/
 │   ├── calendar.js              # 事件类型、日期状态、日记 CRUD 封装、按月查询、统计聚合
@@ -46,8 +49,6 @@ calendar/
 │   ├── auth.js                  # 用户信息与登录态（storage 持久化）
 │   ├── theme.js                 # 黑夜模式切换（storage key: app_theme）
 │   └── profile-theme.js         # 按用户性别返回资料主题类
-├── data/
-│   └── gym-actions.json         # 健身房动作库（联想列表 + 常用动作）
 ├── scripts/
 │   └── release-h5.sh            # H5 发版：构建/上传/备份/切换/健康检查
 ├── static/fonts/                # remixicon.css + woff2 字体
@@ -102,8 +103,9 @@ App.vue (onLaunch 检查登录态)
   - 动态人物列表 = 自己 + 状态为 active 的绑定用户 + 共同（store/persons.js，按 id 去重）
   - `normalizePersonId` 兼容历史值（identity_tag / username / husband / wife / 名称）；`toPersonPayload` 转为接口提交值
 - **体重**：从 `weight` 事件的备注中解析 20–300 区间的数值，统计页按人物生成趋势点
-- **运动（健身房）**：日期弹窗选中「运动」时切换为健身房记录表单（动作联想输入 + 组数/次数/重量 + 备注），提交时拼接为 `动作 · N组×M次 · 重量kg · 备注`（重量、备注选填）写入 `event_remark`，后端仍只存这一个文本字段；动作联想库维护在 `data/gym-actions.json`
-- **事件编辑**：调用 `PUT /diary/{id}` 部分更新（未传字段保持原值），弹窗编辑态可修改日期（支持跨天）/人物/类型/备注；不传 `attachments` 以保留原附件，`CreatedAt` 保持不变
+- **运动（健身房）**：新增运动记录时走 `/gym-records` 结构化存储（动作/组数/次数/重量/备注），日历查询时把健身记录与日记事件合并展示；动作库由后端 `/gym-actions` 提供，输入时按名称模糊搜索（空输入展示常用动作），新动作由健身记录接口自动入库。历史「运动」日记仍按 `动作 · N组×M次 · 重量kg · 备注` 文本解析展示，编辑/删除沿用日记接口
+- **事件编辑**：日记事件调用 `PUT /diary/{id}` 部分更新（未传字段保持原值），健身记录调用 `PUT /gym-records/{id}`；弹窗编辑态可修改日期（支持跨天）/人物/类型/备注；不传 `attachments` 以保留原附件，`CreatedAt` 保持不变
+- **健身同步**：健身记录与日记一致，绑定用户之间双向同步；解绑后保留历史副本，后续新增不再同步
 
 ## 样式主题
 
@@ -157,6 +159,7 @@ App.vue (onLaunch 检查登录态)
 5. 跨页面共享状态放 `store/`（普通 ES 模块，非 Pinia），页面级数据用 `ref` / `reactive`
 6. 避免在模板中使用复杂表达式，提取为 computed
 7. 单文件尽量保持职责单一；当前页面上限已到 ~1100 行，新增复杂 UI 优先拆到 `components/` 或 `store/`
+8. **类型专属录入表单**：独立成 `components/*-form/` 组件，组件内完成校验并输出结构化字段，通过 `emit("submit", { title, action, sets, reps, weight, note })` 交给宿主落库（`title` 供旧版日记事件回写，结构化字段供 `/gym-records` 使用）；新增时在 `date-detail-modal` 的 `TYPE_FORM_COMPONENTS` 注册即可（props 约定：`initialTitle` 旧版文本回填、`initial` 结构化回填、`editing` 编辑态、`dark` 夜间样式，新增场景通过 `defineExpose` 暴露重置方法）
 
 ### 命名规范
 

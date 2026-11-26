@@ -20,6 +20,12 @@ import {
 	queryDiaryByMonth,
 	deleteDiary,
 } from "@/api/diary.js";
+import {
+	queryGymRecordsByDay,
+	queryGymRecordsByMonth,
+	deleteGymRecord,
+} from "@/api/gym-records.js";
+import { formatExerciseTitle } from "@/utils/exercise.js";
 
 /* ----- 预定义事件类型 ----- */
 export const EVENT_TYPES = Object.freeze([
@@ -103,11 +109,42 @@ function normalizePersonIdForStats(raw, persons = []) {
 function diaryToEvent(d) {
 	return {
 		id: d.ID,
+		source: "diary",
 		type: typeIdByName(d.event),
 		title: d.event_remark || d.event,
 		count: 1,
 		person: d.person || "both",
 		createdAt: d.CreatedAt || "",
+	};
+}
+
+/**
+ * 将结构化健身记录转换为本地事件。
+ * 每条记录独立展示（count 固定为 0，不参与同类合并和加减计数），
+ * 编辑与删除直接走健身记录接口。
+ */
+function gymRecordToEvent(record) {
+	const weight = Number(record.weight) > 0 ? record.weight : "";
+	return {
+		id: record.id,
+		source: "gym",
+		type: "exercise",
+		title: formatExerciseTitle({
+			action: record.action_name,
+			sets: record.sets,
+			reps: record.reps,
+			weight,
+			note: record.note,
+		}),
+		action: record.action_name,
+		sets: record.sets,
+		reps: record.reps,
+		weight,
+		note: record.note || "",
+		count: 0,
+		person: record.person || "both",
+		createdAt: record.created_at || "",
+		date: record.date || "",
 	};
 }
 
@@ -188,13 +225,22 @@ export async function decrementEvent(
 	}
 }
 
-/** 清空某天所有事件 */
+/** 清空某天所有事件（日记事件 + 结构化健身记录） */
 export async function clearDateEvents(year, month, day) {
 	const date = dateKey(year, month, day);
-	const result = await queryDiaryByDay(date);
-	if (!result || !result.diaries) return;
-	for (const d of result.diaries) {
-		await deleteDiary(d.ID);
+	const [result, gymResult] = await Promise.all([
+		queryDiaryByDay(date),
+		queryGymRecordsByDay(date).catch(() => null),
+	]);
+	if (result && result.diaries) {
+		for (const d of result.diaries) {
+			await deleteDiary(d.ID);
+		}
+	}
+	if (gymResult && gymResult.records) {
+		for (const record of gymResult.records) {
+			await deleteGymRecord(record.id);
+		}
 	}
 }
 
@@ -204,27 +250,48 @@ export async function clearDateEvents(year, month, day) {
 export async function getDateEvents(year, month, day) {
 	const date = dateKey(year, month, day);
 	try {
-		const result = await queryDiaryByDay(date);
-		return result && result.diaries ? result.diaries.map(diaryToEvent) : [];
+		const [result, gymResult] = await Promise.all([
+			queryDiaryByDay(date),
+			queryGymRecordsByDay(date).catch(() => null),
+		]);
+		const events = result && result.diaries ? result.diaries.map(diaryToEvent) : [];
+		if (gymResult && gymResult.records) {
+			gymResult.records.forEach((record) => events.push(gymRecordToEvent(record)));
+		}
+		return events;
 	} catch (_) {
 		return [];
 	}
 }
 
-/** 获取某个月全部数据，按日期分组 */
+/** 获取某个月全部数据，按日期分组（日记事件 + 结构化健身记录） */
 export async function getMonthData(year, month) {
 	const monthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
 	try {
-		const result = await queryDiaryByMonth(monthStr);
-		if (!result || !result.days) return {};
+		const [result, gymResult] = await Promise.all([
+			queryDiaryByMonth(monthStr),
+			queryGymRecordsByMonth(monthStr).catch(() => null),
+		]);
 
 		const map = {};
-		result.days.forEach((dayGroup) => {
-			map[dayGroup.date] = {
-				status: dayGroup.daily_status,
-				events: (dayGroup.diaries || []).map(diaryToEvent),
-			};
-		});
+		if (result && result.days) {
+			result.days.forEach((dayGroup) => {
+				map[dayGroup.date] = {
+					status: dayGroup.daily_status,
+					events: (dayGroup.diaries || []).map(diaryToEvent),
+				};
+			});
+		}
+		if (gymResult && gymResult.records) {
+			gymResult.records.forEach((record) => {
+				const key = record.date;
+				if (!key) return;
+				if (!map[key]) {
+					map[key] = { status: undefined, events: [] };
+				}
+				map[key].events.push(gymRecordToEvent(record));
+			});
+		}
 		return map;
 	} catch (_) {
 		return {};
@@ -233,7 +300,7 @@ export async function getMonthData(year, month) {
 
 /* ============ 统计（API 聚合） ============ */
 
-/** 获取日期范围内所有日记（扁平列表） */
+/** 获取日期范围内所有事件（日记 + 健身记录，扁平列表） */
 export async function getDateRangeEvents(startKey, endKey) {
 	// 简化：按月拉取然后过滤
 	const [sy, sm] = startKey.split("-").map(Number);
@@ -245,22 +312,28 @@ export async function getDateRangeEvents(startKey, endKey) {
 		const mEnd = y === ey ? em : 12;
 		for (let m = mStart; m <= mEnd; m++) {
 			const monthStr = `${y}-${String(m).padStart(2, "0")}`;
-			try {
-				const result = await queryDiaryByMonth(monthStr);
-				if (result && result.days) {
-					result.days.forEach((day) => {
-						if (day.date >= startKey && day.date <= endKey) {
-							(day.diaries || []).forEach((d) => {
-								all.push({
-									...diaryToEvent(d),
-									date: day.date,
-								});
+			const [result, gymResult] = await Promise.all([
+				queryDiaryByMonth(monthStr).catch(() => null),
+				queryGymRecordsByMonth(monthStr).catch(() => null),
+			]);
+			if (result && result.days) {
+				result.days.forEach((day) => {
+					if (day.date >= startKey && day.date <= endKey) {
+						(day.diaries || []).forEach((d) => {
+							all.push({
+								...diaryToEvent(d),
+								date: day.date,
 							});
-						}
-					});
-				}
-			} catch (_) {
-				/* skip */
+						});
+					}
+				});
+			}
+			if (gymResult && gymResult.records) {
+				gymResult.records.forEach((record) => {
+					if (record.date >= startKey && record.date <= endKey) {
+						all.push(gymRecordToEvent(record));
+					}
+				});
 			}
 		}
 	}
