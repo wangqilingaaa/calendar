@@ -634,7 +634,26 @@ async function decEvent(event) {
 	emit("refresh");
 }
 
+// 删除类操作统一弹窗二次确认，防止误触
+function confirmDelete(title, content, confirmText = "删除") {
+	return new Promise((resolve) => {
+		uni.showModal({
+			title,
+			content,
+			confirmText,
+			confirmColor: "#dd524d",
+			success: (res) => resolve(res.confirm),
+			fail: () => resolve(false),
+		});
+	});
+}
+
 async function delEvent(event) {
+	const confirmed = await confirmDelete(
+		"删除事件",
+		`确定删除「${event.title || "该事件"}」吗？此操作不可撤销。`,
+	);
+	if (!confirmed) return;
 	if (event.source === "gym") {
 		await deleteGymRecord(event.id);
 	} else {
@@ -644,6 +663,12 @@ async function delEvent(event) {
 }
 
 async function clearAll() {
+	const confirmed = await confirmDelete(
+		"清空全部事件",
+		`确定清空当天全部 ${events.value.length} 条事件吗？此操作不可撤销。`,
+		"清空",
+	);
+	if (!confirmed) return;
 	await clearDateEvents(props.year, props.month, props.day);
 	emit("refresh");
 }
